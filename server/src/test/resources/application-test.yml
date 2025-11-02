@@ -1,0 +1,36 @@
+# Test-specific configuration applied when test profile is active
+# Note: Flyway is disabled via @DynamicPropertySource in PostgresTestBase
+# to ensure it works with all profiles (including "secure")
+# 
+# This configuration is automatically applied when:
+# - No profile is specified (defaults to "default" profile)
+# - Or when @ActiveProfiles("test") is used
+# - Other profiles like "secure" will not use this file unless they also include "test"
+
+spring:
+  # Disable Flyway auto-migration in tests
+  # Migrations are executed once by SharedPostgresContainer on first container start
+  flyway:
+    enabled: false
+  
+  # Configure JPA/Hibernate for tests
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Use validate instead of update to rely on Flyway migrations
+    show-sql: false  # Disable SQL logging in tests for better performance (can enable for debugging)
+    properties:
+      hibernate:
+        format_sql: false
+  
+  # Enable Spring Test context caching for better performance
+  # This allows Spring contexts with same configuration to be reused across test classes
+  # Spring Boot 2.2+ enables this by default, but we explicitly configure it
+  test:
+    context:
+      cache:
+        enabled: true
+  
+  # Enable throwing NoHandlerFoundException for 404 handling
+  mvc:
+    throw-exception-if-no-handler-found: true
+
