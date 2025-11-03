@@ -1,7 +1,9 @@
 package io.github.sijiezhong.track.controller;
 
 import io.github.sijiezhong.track.constants.HttpHeaderConstants;
+import io.github.sijiezhong.track.constants.EventTypeEnum;
 import io.github.sijiezhong.track.dto.EventCollectRequest;
+import io.github.sijiezhong.track.dto.PixelBatchEvent;
 import io.github.sijiezhong.track.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +19,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,38 +54,236 @@ public class EventPixelController {
     }
 
     /**
-     * 像素上报接口
+     * 像素上报接口（支持单个和批量事件）
      * 
      * <p>
      * 返回1x1透明GIF图片并记录事件。支持通过查询参数传递事件信息。
+     * 为了支持跨域，tenantId 可以从 URL 参数或请求头获取（优先 URL 参数）。
      * 
-     * @param tenantId  租户ID请求头（必填）
-     * @param eventName 事件名称（默认"pixel"）
-     * @param sessionId 会话ID（可选）
-     * @param userId    用户ID（可选）
+     * <p>
+     * 支持两种模式：
+     * <ul>
+     *   <li>单个事件模式：使用 eventName/eventContent 参数（向后兼容）</li>
+     *   <li>批量事件模式：使用 eventsB64 参数传递 Base64 编码的批量事件数组</li>
+     * </ul>
+     * 
+     * <p>
+     * 参数支持完整名称和缩写：
+     * <ul>
+     *   <li>tenantId / t: 租户ID</li>
+     *   <li>sessionId / s: 会话ID</li>
+     *   <li>userId / u: 用户ID</li>
+     *   <li>eventName / n: 事件名（单个模式）</li>
+     *   <li>eventContent / c: 事件内容（单个模式）</li>
+     *   <li>eventsB64 / b: 批量事件（Base64编码）</li>
+     *   <li>batch / bt: 批量模式标识（1=批量，0=单个）</li>
+     * </ul>
+     * 
+     * @param tenantIdHeader  租户ID请求头（可选）
+     * @param tenantId        租户ID URL参数（完整名，可选）
+     * @param tenantIdShort   租户ID URL参数（缩写 t，可选）
+     * @param eventName       事件名称（完整名，单个模式，可选）
+     * @param eventNameShort  事件名称（缩写 n，单个模式，可选）
+     * @param eventContent    事件内容 JSON（完整名，单个模式，可选）
+     * @param eventContentShort 事件内容 JSON（缩写 c，单个模式，可选）
+     * @param eventsB64       批量事件 Base64（完整名，批量模式，可选）
+     * @param eventsB64Short  批量事件 Base64（缩写 b，批量模式，可选）
+     * @param batch           批量模式标识（完整名，可选，默认 "0"）
+     * @param batchShort      批量模式标识（缩写 bt，可选）
+     * @param sessionId       会话ID（完整名，可选）
+     * @param sessionIdShort  会话ID（缩写 s，可选）
+     * @param userId          用户ID（完整名，可选）
+     * @param userIdShort     用户ID（缩写 u，可选）
      * @return 1x1透明GIF图片
      */
     @GetMapping(value = "/api/v1/pixel.gif")
-    @Operation(summary = "像素上报：返回1x1 GIF 并记录事件")
+    @Operation(summary = "像素上报：返回1x1 GIF 并记录事件（支持批量）")
     public ResponseEntity<byte[]> pixel(
-            @Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId,
-            @Parameter(description = "事件名") @RequestParam(name = "eventName", required = false, defaultValue = "pixel") String eventName,
-            @Parameter(description = "会话ID") @RequestParam(name = "sessionId", required = false) String sessionId,
-            @Parameter(description = "用户ID") @RequestParam(name = "userId", required = false) Integer userId) {
+            @Parameter(description = "租户头（可选）") 
+            @RequestHeader(value = HttpHeaderConstants.HEADER_TENANT_ID, required = false) Integer tenantIdHeader,
+            
+            // 租户ID参数（支持完整名和缩写）
+            @Parameter(description = "租户ID URL参数（完整名，优先）") 
+            @RequestParam(name = "tenantId", required = false) Integer tenantId,
+            @RequestParam(name = "t", required = false) Integer tenantIdShort,
+            
+            // 单个事件参数（向后兼容，支持完整名和缩写）
+            @Parameter(description = "事件名（单个模式，完整名）") 
+            @RequestParam(name = "eventName", required = false, defaultValue = "pixel") String eventName,
+            @RequestParam(name = "n", required = false) String eventNameShort,
+            @Parameter(description = "事件内容 JSON（单个模式，完整名）") 
+            @RequestParam(name = "eventContent", required = false) String eventContent,
+            @RequestParam(name = "c", required = false) String eventContentShort,
+            
+            // 批量事件参数（支持完整名和缩写）
+            @Parameter(description = "批量事件 Base64（批量模式，完整名）") 
+            @RequestParam(name = "eventsB64", required = false) String eventsB64,
+            @RequestParam(name = "b", required = false) String eventsB64Short,
+            @Parameter(description = "批量模式标识（1=批量，0=单个，完整名）") 
+            @RequestParam(name = "batch", required = false, defaultValue = "0") String batch,
+            @RequestParam(name = "bt", required = false) String batchShort,
+            
+            // 会话和用户参数（支持完整名和缩写）
+            @Parameter(description = "会话ID（完整名）") 
+            @RequestParam(name = "sessionId", required = false) String sessionId,
+            @RequestParam(name = "s", required = false) String sessionIdShort,
+            @Parameter(description = "用户ID（完整名）") 
+            @RequestParam(name = "userId", required = false) Integer userId,
+            @RequestParam(name = "u", required = false) Integer userIdShort) {
 
-        log.debug("收到像素上报请求: tenantId={}, eventName={}, sessionId={}", tenantId, eventName, sessionId);
+        // 统一参数处理（优先使用缩写，回退到完整名）
+        Integer finalTenantId = tenantIdShort != null ? tenantIdShort 
+                              : (tenantId != null ? tenantId : tenantIdHeader);
+        String finalSessionId = sessionIdShort != null ? sessionIdShort : sessionId;
+        Integer finalUserId = userIdShort != null ? userIdShort : userId;
+        String finalEventsB64 = eventsB64Short != null ? eventsB64Short : eventsB64;
+        String finalBatch = batchShort != null ? batchShort : batch;
+        String finalEventName = eventNameShort != null ? eventNameShort : eventName;
+        String finalEventContent = eventContentShort != null ? eventContentShort : eventContent;
+        
+        if (finalTenantId == null) {
+            log.warn("像素上报缺少 tenantId 参数");
+            // 返回 GIF 但不记录事件
+            return createGifResponse();
+        }
+    
+        // 判断是否为批量模式
+        boolean isBatch = "1".equals(finalBatch) || "true".equalsIgnoreCase(finalBatch);
+        
+        if (isBatch && finalEventsB64 != null && !finalEventsB64.isEmpty()) {
+            // 批量模式：解析并保存多个事件
+            return handleBatchPixel(finalTenantId, finalSessionId, finalUserId, finalEventsB64);
+        } else {
+            // 单个事件模式（向后兼容）
+            return handleSinglePixel(finalTenantId, finalSessionId, finalUserId, finalEventName, finalEventContent);
+        }
+    }
+
+    /**
+     * 处理批量像素上报
+     * 
+     * @param tenantId 租户ID
+     * @param sessionId 会话ID
+     * @param userId 用户ID
+     * @param eventsB64 Base64编码的批量事件JSON数组
+     * @return GIF响应
+     */
+    private ResponseEntity<byte[]> handleBatchPixel(Integer tenantId, String sessionId, 
+                                                     Integer userId, String eventsB64) {
+        try {
+            // URL-safe Base64 解码（处理 + 和 / 被替换为 - 和 _ 的情况）
+            String normalizedB64 = eventsB64.replace('-', '+').replace('_', '/');
+            // 补全填充
+            int padding = normalizedB64.length() % 4;
+            if (padding > 0) {
+                normalizedB64 += "==".substring(0, 4 - padding);
+            }
+            
+            // Base64 解码
+            String decoded = new String(
+                Base64.getDecoder().decode(normalizedB64), 
+                StandardCharsets.UTF_8
+            );
+            
+            // 解析JSON数组
+            com.fasterxml.jackson.databind.ObjectMapper om = 
+                new com.fasterxml.jackson.databind.ObjectMapper();
+            List<PixelBatchEvent> events = om.readValue(
+                decoded, 
+                om.getTypeFactory().constructCollectionType(
+                    List.class, 
+                    PixelBatchEvent.class
+                )
+            );
+            
+            if (events == null || events.isEmpty()) {
+                log.warn("批量像素上报：事件列表为空");
+                return createGifResponse();
+            }
+            
+            // 批量保存事件
+            int saved = 0;
+            for (PixelBatchEvent event : events) {
+                try {
+                    EventCollectRequest req = new EventCollectRequest();
+                    req.setTenantId(tenantId);
+                    req.setSessionId(sessionId);
+                    req.setUserId(userId);
+                    
+                    // 将压缩码转换为完整事件名
+                    EventTypeEnum typeEnum = EventTypeEnum.fromCode(event.getType());
+                    req.setEventName(typeEnum.getEventName());
+                    req.setProperties(
+                        event.getContent() != null && !event.getContent().isNull() 
+                            ? event.getContent() 
+                            : om.createObjectNode()
+                    );
+                    
+                    eventService.save(req);
+                    saved++;
+                } catch (Exception e) {
+                    log.warn("批量像素上报：保存单个事件失败: type={}", event.getType(), e);
+                }
+            }
+            
+            log.debug("批量像素上报成功: tenantId={}, count={}, saved={}", tenantId, events.size(), saved);
+            
+        } catch (IllegalArgumentException e) {
+            log.error("批量像素上报：Base64解码失败: tenantId={}", tenantId, e);
+        } catch (Exception e) {
+            log.error("批量像素上报失败: tenantId={}", tenantId, e);
+        }
+        
+        return createGifResponse();
+    }
+
+    /**
+     * 处理单个像素上报（向后兼容）
+     * 
+     * @param tenantId 租户ID
+     * @param sessionId 会话ID
+     * @param userId 用户ID
+     * @param eventName 事件名称
+     * @param eventContent 事件内容JSON字符串
+     * @return GIF响应
+     */
+    private ResponseEntity<byte[]> handleSinglePixel(Integer tenantId, String sessionId, 
+                                                      Integer userId, String eventName, 
+                                                      String eventContent) {
+        log.debug("收到像素上报请求: tenantId={}, eventName={}, sessionId={}, hasEventContent={}", 
+                tenantId, eventName, sessionId, eventContent != null);
 
         EventCollectRequest req = new EventCollectRequest();
         req.setTenantId(tenantId);
-        req.setEventName(eventName);
+        req.setEventName(eventName != null ? eventName : "pixel");
         req.setSessionId(sessionId);
         req.setUserId(userId);
-        // 填充最小必需字段
+        
+        // 解析事件内容（如果提供）
         com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
-        req.setProperties(om.createObjectNode());
+        if (eventContent != null && !eventContent.isEmpty()) {
+            try {
+                req.setProperties(om.readValue(eventContent, com.fasterxml.jackson.databind.node.ObjectNode.class));
+            } catch (Exception e) {
+                log.warn("解析 eventContent 失败: {}", eventContent, e);
+                req.setProperties(om.createObjectNode());
+            }
+        } else {
+            req.setProperties(om.createObjectNode());
+        }
+        
         // 持久化事件（忽略返回值）
         eventService.save(req);
 
+        return createGifResponse();
+    }
+
+    /**
+     * 创建GIF响应
+     * 
+     * @return GIF响应实体
+     */
+    private ResponseEntity<byte[]> createGifResponse() {
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.CONTENT_TYPE, "image/gif");
         headers.setCacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic().getHeaderValue());

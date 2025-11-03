@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -95,7 +96,8 @@ public class EventQueryController {
             size = ApiConstants.DEFAULT_PAGE_SIZE;
         }
         
-        Pageable pageable = PageRequest.of(page, size);
+        // 创建分页对象，按事件时间倒序（最新的在前）
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "eventTime"));
         
         // 构建查询条件
         Specification<Event> spec = Specification.where(null);

@@ -2,45 +2,80 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15
+    container_name: track-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: track
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-track}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d track"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-track}"]
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 5
+    networks:
+      - track-network
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
+    container_name: track-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 5
+    networks:
+      - track-network
 
   server:
     build:
       context: ./server
+      dockerfile: Dockerfile
+    container_name: track-server
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/track
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-track}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_FLYWAY_ENABLED: "true"
-      WEBHOOK_ENABLED: "false"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+      WEBHOOK_ENABLED: ${WEBHOOK_ENABLED:-false}
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx1g -Xms512m}
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8080}:8080"
+    networks:
+      - track-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  track-network:
+    driver: bridge
 
 

@@ -36,7 +36,81 @@ Track 是一套完全开源、可商用的全栈埋点分析解决方案，支�
 > 各子项目均自带独立 README/README.md 及构建说明，无需商业 key 或注册。
 
 ## 快速开始
+
+### 本地开发
 详见各子项目 README。
+
+### Docker 部署（推荐）
+
+**前置要求**：
+- Docker 20.10+
+- Docker Compose V2
+
+**一键部署**：
+```bash
+# 1. 克隆项目
+git clone https://github.com/sijiezhong/track.git
+cd track
+
+# 2. 配置环境变量
+cp env.template .env
+nano .env  # 修改数据库密码等配置
+
+# 3. 启动服务
+docker compose up -d --build
+
+# 4. 验证部署
+curl http://localhost:8080/actuator/health
+```
+
+**访问服务**：
+- API 文档：http://localhost:8080/swagger-ui.html
+- 健康检查：http://localhost:8080/actuator/health
+
+**常用命令**：
+```bash
+# 查看服务状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f server
+
+# 重启服务
+docker compose restart
+
+# 停止服务
+docker compose stop
+
+# 备份数据
+bash scripts/backup.sh
+```
+
+### 生产环境部署
+
+详细的生产环境部署指南请参考：[**部署指南.md**](./部署指南.md)
+
+包含：
+- ✅ 服务器初始化（Ubuntu 24.04）
+- ✅ Docker 环境配置
+- ✅ 文件上传与部署
+- ✅ 数据备份与恢复
+- ✅ Nginx 反向代理配置
+- ✅ 常见问题排查
+
+**一键脚本**：
+```bash
+# 服务器初始化（仅首次）
+sudo bash scripts/server-init.sh
+
+# 部署应用
+bash scripts/deploy.sh
+
+# 检查状态
+bash scripts/check-status.sh
+
+# 数据备份
+bash scripts/backup.sh
+```
 
 ## 开源与合规
 本项目及所有依赖全部为 Apache/MIT/GPL 等主流开源协议（详见 LICENSE）。禁止引入任何收费或闭源依赖，代码可自由商用、二开。
