@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
-@ConditionalOnProperty(name = "tenant.guard.enabled", havingValue = "true", matchIfMissing = false)
-public class TenantGuardInterceptor implements HandlerInterceptor {
+@ConditionalOnProperty(name = "app.guard.enabled", havingValue = "true", matchIfMissing = false)
+public class AppGuardInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) {
@@ -28,8 +28,8 @@ public class TenantGuardInterceptor implements HandlerInterceptor {
             return true;
         }
         
-        String tenantHeader = request.getHeader("X-Tenant-Id");
-        if (tenantHeader == null || tenantHeader.isBlank()) {
+        String appHeader = request.getHeader("X-App-Id");
+        if (appHeader == null || appHeader.isBlank()) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return false;
         }
@@ -37,5 +37,4 @@ public class TenantGuardInterceptor implements HandlerInterceptor {
         return true;
     }
 }
-
 

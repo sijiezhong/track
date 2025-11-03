@@ -25,7 +25,7 @@ public class Session {
   @Column(length = 64)
   private String ip; // 来源IP
 
-  private Integer tenantId; // 多租户ID
+  private Integer appId; // 应用ID
 
   @Column(nullable = false)
   private LocalDateTime startTime = LocalDateTime.now(); // 会话开始时间
@@ -83,12 +83,12 @@ public class Session {
     this.ip = ip;
   }
 
-  public Integer getTenantId() {
-    return tenantId;
+  public Integer getAppId() {
+    return appId;
   }
 
-  public void setTenantId(Integer tenantId) {
-    this.tenantId = tenantId;
+  public void setAppId(Integer appId) {
+    this.appId = appId;
   }
 
   public LocalDateTime getStartTime() {

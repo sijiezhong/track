@@ -10,17 +10,17 @@ public class EventListItem {
     private String eventName;
     private Integer userId;
     private Long sessionId;
-    private Integer tenantId;
+    private Integer appId;
     private LocalDateTime eventTime;
     private String properties;
 
     public EventListItem() { }
-    public EventListItem(Long id, String eventName, Integer userId, Long sessionId, Integer tenantId, LocalDateTime eventTime, String properties) {
+    public EventListItem(Long id, String eventName, Integer userId, Long sessionId, Integer appId, LocalDateTime eventTime, String properties) {
         this.id = id;
         this.eventName = eventName;
         this.userId = userId;
         this.sessionId = sessionId;
-        this.tenantId = tenantId;
+        this.appId = appId;
         this.eventTime = eventTime;
         this.properties = properties;
     }
@@ -33,8 +33,8 @@ public class EventListItem {
     public void setUserId(Integer userId) { this.userId = userId; }
     public Long getSessionId() { return sessionId; }
     public void setSessionId(Long sessionId) { this.sessionId = sessionId; }
-    public Integer getTenantId() { return tenantId; }
-    public void setTenantId(Integer tenantId) { this.tenantId = tenantId; }
+    public Integer getTenantId() { return appId; }
+    public void setTenantId(Integer appId) { this.appId = appId; }
     public LocalDateTime getEventTime() { return eventTime; }
     public void setEventTime(LocalDateTime eventTime) { this.eventTime = eventTime; }
     public String getProperties() { return properties; }

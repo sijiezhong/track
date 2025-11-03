@@ -35,9 +35,9 @@ public class AnalyticsService {
         this.eventRepository = eventRepository;
     }
 
-    public List<Map<String, Object>> trendDaily(Integer tenantId, String eventName, LocalDateTime start,
+    public List<Map<String, Object>> trendDaily(Integer appId, String eventName, LocalDateTime start,
             LocalDateTime end) {
-        List<Object[]> rows = eventRepository.aggregateDaily(tenantId, eventName, start, end);
+        List<Object[]> rows = eventRepository.aggregateDaily(appId, eventName, start, end);
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] r : rows) {
             Map<String, Object> m = new HashMap<>();
@@ -48,8 +48,8 @@ public class AnalyticsService {
         return result;
     }
 
-    public List<Map<String, Object>> pathEdges(Integer tenantId, LocalDateTime start, LocalDateTime end) {
-        List<Object[]> rows = eventRepository.aggregatePathEdges(tenantId, start, end);
+    public List<Map<String, Object>> pathEdges(Integer appId, LocalDateTime start, LocalDateTime end) {
+        List<Object[]> rows = eventRepository.aggregatePathEdges(appId, start, end);
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] r : rows) {
             Map<String, Object> m = new HashMap<>();
@@ -61,9 +61,9 @@ public class AnalyticsService {
         return result;
     }
 
-    public List<Map<String, Object>> retentionDaily(Integer tenantId, String cohortEvent, String returnEvent,
+    public List<Map<String, Object>> retentionDaily(Integer appId, String cohortEvent, String returnEvent,
             Integer day, LocalDateTime start, LocalDateTime end) {
-        List<Object[]> rows = eventRepository.aggregateDailyRetention(tenantId, cohortEvent, returnEvent, day, start,
+        List<Object[]> rows = eventRepository.aggregateDailyRetention(appId, cohortEvent, returnEvent, day, start,
                 end);
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] r : rows) {
@@ -79,15 +79,15 @@ public class AnalyticsService {
         return result;
     }
 
-    public Map<String, Object> funnel(Integer tenantId, List<String> steps, LocalDateTime start, LocalDateTime end) {
-        log.debug("执行漏斗分析: tenantId={}, steps={}", tenantId, steps);
+    public Map<String, Object> funnel(Integer appId, List<String> steps, LocalDateTime start, LocalDateTime end) {
+        log.debug("执行漏斗分析: appId={}, steps={}", appId, steps);
 
         if (steps == null || steps.size() < BusinessConstants.MIN_FUNNEL_STEPS) {
             throw new BusinessException(ErrorCode.FUNNEL_STEPS_INVALID,
                     String.format("漏斗步骤数量必须大于等于%d", BusinessConstants.MIN_FUNNEL_STEPS));
         }
         String[] stepArray = steps.toArray(new String[0]);
-        List<Object[]> rows = eventRepository.findEventsForFunnel(tenantId, stepArray, start, end);
+        List<Object[]> rows = eventRepository.findEventsForFunnel(appId, stepArray, start, end);
 
         // counts[i] 表示到达第 i 步（包含顺序约束）的会话数
         int n = stepArray.length;
@@ -140,7 +140,7 @@ public class AnalyticsService {
         return out;
     }
 
-    public Map<String, Object> segmentation(Integer tenantId, String eventName, String by) {
+    public Map<String, Object> segmentation(Integer appId, String eventName, String by) {
         String column;
         switch (by) {
             case "browser":
@@ -158,7 +158,7 @@ public class AnalyticsService {
             default:
                 throw new BusinessException(ErrorCode.SEGMENTATION_BY_INVALID, "不支持的分组维度: " + by);
         }
-        List<Object[]> rows = eventRepository.segmentCountByColumn(tenantId, eventName, column);
+        List<Object[]> rows = eventRepository.segmentCountByColumn(appId, eventName, column);
         List<Map<String, Object>> items = new ArrayList<>();
         for (Object[] r : rows) {
             Map<String, Object> m = new HashMap<>();
@@ -172,13 +172,13 @@ public class AnalyticsService {
         return out;
     }
 
-    public Map<String, Object> heatmap(Integer tenantId, String eventName, String bucket) {
-        log.debug("执行热点分析: tenantId={}, eventName={}, bucket={}", tenantId, eventName, bucket);
+    public Map<String, Object> heatmap(Integer appId, String eventName, String bucket) {
+        log.debug("执行热点分析: appId={}, eventName={}, bucket={}", appId, eventName, bucket);
 
         if (!"hour".equalsIgnoreCase(bucket)) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "目前仅支持hour粒度");
         }
-        List<Object[]> rows = eventRepository.aggregateByHour(tenantId, eventName);
+        List<Object[]> rows = eventRepository.aggregateByHour(appId, eventName);
         long[] buckets = new long[24];
         for (Object[] r : rows) {
             int hour = ((Number) r[0]).intValue();

@@ -11,7 +11,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.io.BufferedReader;
 import java.time.LocalDateTime;
 
 @Component
@@ -44,15 +43,15 @@ public class AuditLogInterceptor implements HandlerInterceptor {
             String path = request.getRequestURI();
             // 排除事件收集路径（新旧路径都排除）
             if (path.startsWith("/api/events/collect") || path.startsWith("/api/v1/events/collect")) return;
-            Integer tenantId = null;
+            Integer appId = null;
             try {
-                String header = request.getHeader("X-Tenant-Id");
-                if (header != null) tenantId = Integer.parseInt(header);
+                String header = request.getHeader("X-App-Id");
+                if (header != null) appId = Integer.parseInt(header);
             } catch (Exception ignored) {}
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String user = auth == null ? "anonymous" : String.valueOf(auth.getPrincipal());
             AuditLog log = new AuditLog();
-            log.setTenantId(tenantId);
+            log.setAppId(appId);
             log.setUsername(user);
             log.setMethod(method);
             log.setPath(path);

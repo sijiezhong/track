@@ -70,7 +70,7 @@ public class EventService {
             Session sess;
             try {
                 sess = self.findOrCreateSessionInNewTransactionIsolated(req.getSessionId(), req.getUserId(),
-                        req.getTenantId());
+                        req.getAppId());
             } catch (RuntimeException e) {
                 // If session creation/retrieval fails, try to find it one more time in a fresh
                 // transaction
@@ -93,7 +93,7 @@ public class EventService {
         Event e = new Event();
         e.setEventName(req.getEventName());
         e.setUserId(req.getUserId());
-        e.setTenantId(req.getTenantId());
+        e.setAppId(req.getAppId());
         e.setSessionId(sessionPk);
         e.setProperties(req.getProperties() == null ? null : req.getProperties().toString());
         // 结构化字段
@@ -113,7 +113,7 @@ public class EventService {
             eventsCreatedCounter.increment();
         }
         // 推送SSE
-        broadcaster.broadcastEvent(saved.getTenantId(), saved);
+        broadcaster.broadcastEvent(saved.getAppId(), saved);
         // 触发Webhook（若开启）
         if (webhookService != null) {
             webhookService.onEvent(saved);
@@ -129,7 +129,7 @@ public class EventService {
      * Creates session directly in current transaction with retry on duplicate key
      * exception.
      */
-    private Session findOrCreateSessionInTransaction(String sessionId, Integer userId, Integer tenantId) {
+    private Session findOrCreateSessionInTransaction(String sessionId, Integer userId, Integer appId) {
         // Get or create a lock object for this specific sessionId
         // Use synchronized to ensure thread-safe lock creation
         Object lock = sessionLocks.get(sessionId);
@@ -155,7 +155,7 @@ public class EventService {
                 // Session doesn't exist, try to create it in a new transaction
                 // Using REQUIRES_NEW ensures that if creation fails, the main transaction is
                 // not affected
-                Session created = createSessionInNewTransactionSafe(sessionId, userId, tenantId);
+                Session created = createSessionInNewTransactionSafe(sessionId, userId, appId);
                 if (created != null) {
                     return created;
                 }
@@ -207,8 +207,8 @@ public class EventService {
      *             reliability
      */
     @Deprecated
-    private Session findOrCreateSession(String sessionId, Integer userId, Integer tenantId) {
-        return findOrCreateSessionInTransaction(sessionId, userId, tenantId);
+    private Session findOrCreateSession(String sessionId, Integer userId, Integer appId) {
+        return findOrCreateSessionInTransaction(sessionId, userId, appId);
     }
 
     /**
@@ -218,7 +218,7 @@ public class EventService {
      * Must be public for @Transactional to work (Spring AOP requirement).
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Session findOrCreateSessionInNewTransactionIsolated(String sessionId, Integer userId, Integer tenantId) {
+    public Session findOrCreateSessionInNewTransactionIsolated(String sessionId, Integer userId, Integer appId) {
         // Get or create a lock object for this specific sessionId
         Object lock = sessionLocks.computeIfAbsent(sessionId, k -> new Object());
 
@@ -246,7 +246,7 @@ public class EventService {
                     Session s = new Session();
                     s.setSessionId(sessionId);
                     s.setUserId(userId);
-                    s.setTenantId(tenantId);
+                    s.setAppId(appId);
                     s.setStartTime(LocalDateTime.now());
                     s.setEndTime(LocalDateTime.now());
                     s.setCreateTime(LocalDateTime.now());
@@ -301,12 +301,12 @@ public class EventService {
      * Must be public for @Transactional to work (Spring AOP requirement).
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Session attemptCreateSessionInIsolatedTransaction(String sessionId, Integer userId, Integer tenantId) {
+    public Session attemptCreateSessionInIsolatedTransaction(String sessionId, Integer userId, Integer appId) {
         try {
             Session s = new Session();
             s.setSessionId(sessionId);
             s.setUserId(userId);
-            s.setTenantId(tenantId);
+            s.setAppId(appId);
             s.setStartTime(LocalDateTime.now());
             s.setEndTime(LocalDateTime.now());
             s.setCreateTime(LocalDateTime.now());
@@ -352,7 +352,7 @@ public class EventService {
      * Must be public for @Transactional to work (Spring AOP requirement).
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Session createSessionInNewTransactionSafe(String sessionId, Integer userId, Integer tenantId) {
+    public Session createSessionInNewTransactionSafe(String sessionId, Integer userId, Integer appId) {
         // Try to find again (another thread may have created it between the
         // synchronized check and this transaction)
         Optional<Session> found = sessionRepository.findBySessionIdWithLock(sessionId);
@@ -367,7 +367,7 @@ public class EventService {
             Session s = new Session();
             s.setSessionId(sessionId);
             s.setUserId(userId);
-            s.setTenantId(tenantId);
+            s.setAppId(appId);
             s.setStartTime(LocalDateTime.now());
             s.setEndTime(LocalDateTime.now());
             s.setCreateTime(LocalDateTime.now());
@@ -401,7 +401,7 @@ public class EventService {
      */
     @Deprecated
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Session createSessionInNewTransaction(String sessionId, Integer userId, Integer tenantId) {
-        return createSessionInNewTransactionSafe(sessionId, userId, tenantId);
+    public Session createSessionInNewTransaction(String sessionId, Integer userId, Integer appId) {
+        return createSessionInNewTransactionSafe(sessionId, userId, appId);
     }
 }

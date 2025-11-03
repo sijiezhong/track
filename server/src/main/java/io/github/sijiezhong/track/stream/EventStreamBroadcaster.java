@@ -16,15 +16,15 @@ public class EventStreamBroadcaster {
 
     private static final long DEFAULT_TIMEOUT_MS = Duration.ofMinutes(30).toMillis();
 
-    private final Map<Integer, List<SseEmitter>> tenantEmitters = new ConcurrentHashMap<>();
-    private final Map<Integer, String> lastMessageByTenant = new ConcurrentHashMap<>();
+    private final Map<Integer, List<SseEmitter>> appEmitters = new ConcurrentHashMap<>();
+    private final Map<Integer, String> lastMessageByApp = new ConcurrentHashMap<>();
 
-    public SseEmitter subscribe(int tenantId) {
+    public SseEmitter subscribe(int appId) {
         SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT_MS);
-        tenantEmitters.computeIfAbsent(tenantId, k -> new CopyOnWriteArrayList<>()).add(emitter);
-        emitter.onCompletion(() -> removeEmitter(tenantId, emitter));
-        emitter.onTimeout(() -> removeEmitter(tenantId, emitter));
-        emitter.onError(e -> removeEmitter(tenantId, emitter));
+        appEmitters.computeIfAbsent(appId, k -> new CopyOnWriteArrayList<>()).add(emitter);
+        emitter.onCompletion(() -> removeEmitter(appId, emitter));
+        emitter.onTimeout(() -> removeEmitter(appId, emitter));
+        emitter.onError(e -> removeEmitter(appId, emitter));
         try {
             emitter.send(SseEmitter.event().name("init").data("ok"));
         } catch (IOException ignored) {
@@ -32,26 +32,26 @@ public class EventStreamBroadcaster {
         return emitter;
     }
 
-    public void broadcastEvent(Integer tenantId, Event event) {
-        if (tenantId == null) return;
+    public void broadcastEvent(Integer appId, Event event) {
+        if (appId == null) return;
         String payload = toPayload(event);
-        lastMessageByTenant.put(tenantId, payload);
-        List<SseEmitter> emitters = tenantEmitters.getOrDefault(tenantId, List.of());
+        lastMessageByApp.put(appId, payload);
+        List<SseEmitter> emitters = appEmitters.getOrDefault(appId, List.of());
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name("event").data(payload));
             } catch (IOException e) {
-                removeEmitter(tenantId, emitter);
+                removeEmitter(appId, emitter);
             }
         }
     }
 
-    public String getLastMessageForTenant(Integer tenantId) {
-        return lastMessageByTenant.get(tenantId);
+    public String getLastMessageForTenant(Integer appId) {
+        return lastMessageByApp.get(appId);
     }
 
-    private void removeEmitter(Integer tenantId, SseEmitter emitter) {
-        List<SseEmitter> list = tenantEmitters.get(tenantId);
+    private void removeEmitter(Integer appId, SseEmitter emitter) {
+        List<SseEmitter> list = appEmitters.get(appId);
         if (list != null) {
             list.remove(emitter);
         }

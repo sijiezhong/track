@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * 事件导出控制器
  * 
  * <p>提供事件数据的导出功能，支持CSV和Parquet格式。
- * 所有导出都会进行租户隔离，确保数据安全。
+ * 所有导出都会进行应用隔离，确保数据安全。
  * 
  * @author sijie
  */
@@ -52,26 +52,26 @@ public class EventExportController {
     /**
      * 导出事件CSV
      * 
-     * <p>根据租户ID导出事件数据为CSV格式。支持字段选择和事件名过滤。
+     * <p>根据应用ID导出事件数据为CSV格式。支持字段选择和事件名过滤。
      * 只读用户将自动隐藏properties字段。
      * 
-     * @param tenantId 租户ID请求头（必填）
-     * @param fieldsCsv 导出列（逗号分隔，如 id,eventName,tenantId；为空则使用默认列）
+     * @param appId 应用ID请求头（必填）
+     * @param fieldsCsv 导出列（逗号分隔，如 id,eventName,appId；为空则使用默认列）
      * @param filterEventName 按事件名过滤（可选）
      * @return CSV文件响应
      */
     @GetMapping(value = "/export.csv", produces = "text/csv")
-    @Operation(summary = "导出事件CSV（按租户）", description = "根据 X-Tenant-Id 导出该租户的事件CSV；支持 fields=列名逗号分隔 和 eventName 过滤")
+    @Operation(summary = "导出事件CSV（按应用）", description = "根据 X-App-Id 导出该应用的事件CSV；支持 fields=列名逗号分隔 和 eventName 过滤")
     public ResponseEntity<byte[]> exportCsv(
-            @Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId,
-            @Parameter(description = "导出列，逗号分隔，如 id,eventName,tenantId；为空则使用默认列") @RequestParam(name = "fields", required = false) String fieldsCsv,
+            @Parameter(description = "应用头，必填") @RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId,
+            @Parameter(description = "导出列，逗号分隔，如 id,eventName,appId；为空则使用默认列") @RequestParam(name = "fields", required = false) String fieldsCsv,
             @Parameter(description = "按事件名过滤，可选") @RequestParam(name = "eventName", required = false) String filterEventName) {
         
-        log.info("收到CSV导出请求: tenantId={}, fields={}, filterEventName={}", tenantId, fieldsCsv, filterEventName);
+        log.info("收到CSV导出请求: appId={}, fields={}, filterEventName={}", appId, fieldsCsv, filterEventName);
         
         List<Event> list = eventRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
         List<Event> filtered = list.stream()
-                .filter(e -> tenantId.equals(e.getTenantId()))
+                .filter(e -> appId.equals(e.getAppId()))
                 .filter(e -> filterEventName == null || filterEventName.equals(e.getEventName()))
                 .collect(Collectors.toList());
 
@@ -86,9 +86,9 @@ public class EventExportController {
             sb.append(String.join(",", selected)).append('\n');
         } else {
             if (hideProperties) {
-                sb.append("id,eventName,userId,sessionId,tenantId,eventTime,ua,referrer,ip,device,os,browser\n");
+                sb.append("id,eventName,userId,sessionId,appId,eventTime,ua,referrer,ip,device,os,browser\n");
             } else {
-                sb.append("id,eventName,userId,sessionId,tenantId,eventTime,ua,referrer,ip,device,os,browser,properties\n");
+                sb.append("id,eventName,userId,sessionId,appId,eventTime,ua,referrer,ip,device,os,browser,properties\n");
             }
         }
         DateTimeFormatter fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -106,7 +106,7 @@ public class EventExportController {
                   .append(',').append(csv(e.getEventName()))
                   .append(',').append(csv(e.getUserId()))
                   .append(',').append(csv(e.getSessionId()))
-                  .append(',').append(csv(e.getTenantId()))
+                  .append(',').append(csv(e.getAppId()))
                   .append(',').append(csv(e.getEventTime() == null ? null : e.getEventTime().format(fmt)))
                   .append(',').append(csv(e.getUa()))
                   .append(',').append(csv(e.getReferrer()))
@@ -123,7 +123,7 @@ public class EventExportController {
         
         byte[] bytes = sb.toString().getBytes(StandardCharsets.UTF_8);
         
-        log.info("CSV导出完成: tenantId={}, rowCount={}, size={} bytes", tenantId, filtered.size(), bytes.length);
+        log.info("CSV导出完成: appId={}, rowCount={}, size={} bytes", appId, filtered.size(), bytes.length);
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=events.csv")
@@ -134,19 +134,19 @@ public class EventExportController {
     /**
      * 导出事件Parquet
      * 
-     * <p>根据租户ID导出事件数据为Parquet格式（当前为最小可用实现）。
+     * <p>根据应用ID导出事件数据为Parquet格式（当前为最小可用实现）。
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @return Parquet文件响应
      */
     @GetMapping(value = "/export.parquet", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    @Operation(summary = "导出事件Parquet（按租户）", description = "根据 X-Tenant-Id 导出该租户的事件Parquet（最小可用实现）")
-    public ResponseEntity<byte[]> exportParquet(@Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId) {
-        log.info("收到Parquet导出请求: tenantId={}", tenantId);
+    @Operation(summary = "导出事件Parquet（按应用）", description = "根据 X-App-Id 导出该应用的事件Parquet（最小可用实现）")
+    public ResponseEntity<byte[]> exportParquet(@Parameter(description = "应用头，必填") @RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId) {
+        log.info("收到Parquet导出请求: appId={}", appId);
         
         // 为避免引入额外依赖，这里用极简二进制占位（实际可替换为 Apache Parquet Writer）
         List<Event> list = eventRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
-        List<Event> filtered = list.stream().filter(e -> tenantId.equals(e.getTenantId())).collect(Collectors.toList());
+        List<Event> filtered = list.stream().filter(e -> appId.equals(e.getAppId())).collect(Collectors.toList());
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // 伪Parquet头（魔数占位）+ 简单行计数 + 每行以换行分隔的JSON（可被后续真实Parquet替换）
         byte[] magic = new byte[]{'P','A','R','1'}; // placeholder magic
@@ -157,13 +157,13 @@ public class EventExportController {
             String line = "{" +
                     "\"id\":" + e.getId() + "," +
                     "\"eventName\":\"" + (e.getEventName()==null?"":e.getEventName()) + "\"," +
-                    "\"tenantId\":" + e.getTenantId() +
+                    "\"appId\":" + e.getAppId() +
                     "}" + "\n";
             out.writeBytes(line.getBytes(StandardCharsets.UTF_8));
         }
         byte[] bytes = out.toByteArray();
         
-        log.info("Parquet导出完成: tenantId={}, rowCount={}, size={} bytes", tenantId, filtered.size(), bytes.length);
+        log.info("Parquet导出完成: appId={}, rowCount={}, size={} bytes", appId, filtered.size(), bytes.length);
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=events.parquet")
@@ -218,7 +218,7 @@ public class EventExportController {
             case "eventName" -> e.getEventName();
             case "userId" -> e.getUserId();
             case "sessionId" -> e.getSessionId();
-            case "tenantId" -> e.getTenantId();
+            case "appId" -> e.getAppId();
             case "eventTime" -> e.getEventTime() == null ? null : e.getEventTime().format(fmt);
             case "ua" -> e.getUa();
             case "referrer" -> e.getReferrer();

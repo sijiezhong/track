@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ApplicationRepository extends JpaRepository<Application, Integer> {
-    List<Application> findByTenantId(Integer tenantId);
+    List<Application> findByAppId(Integer appId);
 }
 
 

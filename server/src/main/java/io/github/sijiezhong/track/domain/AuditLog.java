@@ -9,7 +9,7 @@ public class AuditLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Integer tenantId;
+    private Integer appId;
     private String username;
     private String method;
     private String path;
@@ -19,8 +19,8 @@ public class AuditLog {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Integer getTenantId() { return tenantId; }
-    public void setTenantId(Integer tenantId) { this.tenantId = tenantId; }
+    public Integer getAppId() { return appId; }
+    public void setAppId(Integer appId) { this.appId = appId; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getMethod() { return method; }

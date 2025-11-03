@@ -32,7 +32,7 @@ public class User {
     @Column(nullable = false)
     private Boolean isAnonymous = false; // 是否匿名用户
 
-    private Integer tenantId; // 多租户ID
+    private Integer appId; // 应用ID
 
     @Column(nullable = false)
     private LocalDateTime createTime = LocalDateTime.now(); // 创建时间
@@ -98,12 +98,12 @@ public class User {
         this.isAnonymous = isAnonymous;
     }
 
-    public Integer getTenantId() {
-        return tenantId;
+    public Integer getAppId() {
+        return appId;
     }
 
-    public void setTenantId(Integer tenantId) {
-        this.tenantId = tenantId;
+    public void setAppId(Integer appId) {
+        this.appId = appId;
     }
 
     public LocalDateTime getCreateTime() {

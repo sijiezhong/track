@@ -29,13 +29,13 @@ import java.util.List;
  * 管理控制器
  * 
  * <p>提供应用和用户的管理接口，包括创建和查询功能。
- * 所有操作都会进行租户隔离和审计日志记录。
+ * 所有操作都会进行应用隔离和审计日志记录。
  * 
  * @author sijie
  */
 @RestController
 @RequestMapping(ApiConstants.API_PREFIX + "/admin")
-@Tag(name = "Admin", description = "应用与用户管理（租户隔离）")
+@Tag(name = "Admin", description = "应用与用户管理（应用隔离）")
 public class AdminController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
@@ -53,7 +53,7 @@ public class AdminController {
     /**
      * 创建应用
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @param app 应用信息
      * @return 创建的应用
      */
@@ -61,27 +61,27 @@ public class AdminController {
     @Operation(summary = "创建应用")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Application>> createApp(
-            @Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId,
+            @Parameter(description = "应用头，必填") @RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId,
             @RequestBody Application app) {
         
-        log.info("创建应用请求: tenantId={}, appName={}", tenantId, app.getAppName());
+        log.info("创建应用请求: appId={}, appName={}", appId, app.getAppName());
         
-        // 租户ID校验
-        if (app.getTenantId() != null && !app.getTenantId().equals(tenantId)) {
-            throw new ForbiddenException(ErrorCode.TENANT_ID_MISMATCH);
+        // 应用ID校验
+        if (app.getAppId() != null && !app.getAppId().equals(appId)) {
+            throw new ForbiddenException(ErrorCode.APP_ID_MISMATCH);
         }
-        if (app.getTenantId() == null) {
-            app.setTenantId(tenantId);
+        if (app.getAppId() == null) {
+            app.setAppId(appId);
         }
         
         Application saved = applicationRepository.save(app);
         
-        log.info("应用创建成功: appId={}, tenantId={}", saved.getId(), saved.getTenantId());
+        log.info("应用创建成功: appId={}, appId={}", saved.getId(), saved.getAppId());
         
         // 记录审计日志
         try {
             AuditLog logEntry = new AuditLog();
-            logEntry.setTenantId(tenantId);
+            logEntry.setAppId(appId);
             logEntry.setUsername("admin");
             logEntry.setMethod("POST");
             logEntry.setPath("/api/v1/admin/apps");
@@ -96,19 +96,19 @@ public class AdminController {
     }
 
     /**
-     * 按租户查询应用列表
+     * 按应用查询应用列表
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @return 应用列表
      */
     @GetMapping("/apps")
-    @Operation(summary = "按租户查询应用")
-    public ApiResponse<List<Application>> listApps(@RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId) {
-        log.debug("查询应用列表: tenantId={}", tenantId);
+    @Operation(summary = "按应用查询应用")
+    public ApiResponse<List<Application>> listApps(@RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId) {
+        log.debug("查询应用列表: appId={}", appId);
         
-        List<Application> apps = applicationRepository.findByTenantId(tenantId);
+        List<Application> apps = applicationRepository.findByAppId(appId);
         
-        log.debug("应用列表查询完成: tenantId={}, count={}", tenantId, apps.size());
+        log.debug("应用列表查询完成: appId={}, count={}", appId, apps.size());
         
         return ResponseUtil.success(apps);
     }
@@ -116,7 +116,7 @@ public class AdminController {
     /**
      * 创建用户
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @param user 用户信息
      * @return 创建的用户
      */
@@ -124,40 +124,40 @@ public class AdminController {
     @Operation(summary = "创建用户")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<User>> createUser(
-            @Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId,
+            @Parameter(description = "应用头，必填") @RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId,
             @RequestBody User user) {
         
-        log.info("创建用户请求: tenantId={}, username={}", tenantId, user.getUsername());
+        log.info("创建用户请求: appId={}, username={}", appId, user.getUsername());
         
-        // 租户ID校验
-        if (user.getTenantId() != null && !user.getTenantId().equals(tenantId)) {
-            throw new ForbiddenException(ErrorCode.TENANT_ID_MISMATCH);
+        // 应用ID校验
+        if (user.getAppId() != null && !user.getAppId().equals(appId)) {
+            throw new ForbiddenException(ErrorCode.APP_ID_MISMATCH);
         }
-        if (user.getTenantId() == null) {
-            user.setTenantId(tenantId);
+        if (user.getAppId() == null) {
+            user.setAppId(appId);
         }
         
         User saved = userRepository.save(user);
         
-        log.info("用户创建成功: userId={}, tenantId={}", saved.getId(), saved.getTenantId());
+        log.info("用户创建成功: userId={}, appId={}", saved.getId(), saved.getAppId());
         
         return ResponseEntity.status(HttpStatus.CREATED).body(ResponseUtil.success(saved));
     }
 
     /**
-     * 按租户查询用户列表
+     * 按应用查询用户列表
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @return 用户列表
      */
     @GetMapping("/users")
-    @Operation(summary = "按租户查询用户")
-    public ApiResponse<List<User>> listUsers(@RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId) {
-        log.debug("查询用户列表: tenantId={}", tenantId);
+    @Operation(summary = "按应用查询用户")
+    public ApiResponse<List<User>> listUsers(@RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId) {
+        log.debug("查询用户列表: appId={}", appId);
         
-        List<User> users = userRepository.findByTenantId(tenantId);
+        List<User> users = userRepository.findByAppId(appId);
         
-        log.debug("用户列表查询完成: tenantId={}, count={}", tenantId, users.size());
+        log.debug("用户列表查询完成: appId={}, count={}", appId, users.size());
         
         return ResponseUtil.success(users);
     }

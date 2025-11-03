@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  * 事件查询控制器
  * 
  * <p>提供事件数据的查询接口，支持多条件过滤和分页查询。
- * 所有查询都会进行租户隔离，确保数据安全。
+ * 所有查询都会进行应用隔离，确保数据安全。
  * 
  * @author sijie
  */
@@ -55,9 +55,9 @@ public class EventQueryController {
     /**
      * 分页查询事件
      * 
-     * @param headerTenantId 租户ID请求头（必填）
+     * @param headerAppId 应用ID请求头（必填）
      * @param eventName 事件名称（可选）
-     * @param tenantId 租户ID（可选）
+     * @param appId 应用ID（可选）
      * @param sessionId 会话主键ID（可选）
      * @param startTime 起始时间（可选）
      * @param endTime 结束时间（可选）
@@ -66,26 +66,26 @@ public class EventQueryController {
      * @return 分页查询结果
      */
     @GetMapping
-    @Operation(summary = "分页查询事件", description = "支持按事件名/租户/会话/时间范围过滤")
+    @Operation(summary = "分页查询事件", description = "支持按事件名/应用/会话/时间范围过滤")
     public ApiResponse<PageResult<EventListItem>> page(
-            @Parameter(description = "租户头，必填") @RequestHeader(value = HttpHeaderConstants.HEADER_TENANT_ID, required = true) Integer headerTenantId,
+            @Parameter(description = "应用头，必填") @RequestHeader(value = HttpHeaderConstants.HEADER_APP_ID, required = true) Integer headerAppId,
             @Parameter(description = "事件名") @RequestParam(name = "eventName", required = false) String eventName,
-            @Parameter(description = "租户ID") @RequestParam(name = "tenantId", required = false) Integer tenantId,
+            @Parameter(description = "应用ID") @RequestParam(name = "appId", required = false) Integer appId,
             @Parameter(description = "会话主键ID") @RequestParam(name = "sessionId", required = false) Long sessionId,
             @Parameter(description = "起始时间") @RequestParam(name = "startTime", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @Parameter(description = "结束时间") @RequestParam(name = "endTime", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
             @Parameter(description = "页码(从0开始)") @RequestParam(name = "page", defaultValue = "0") int page,
             @Parameter(description = "每页大小") @RequestParam(name = "size", defaultValue = "20") int size) {
         
-        log.debug("收到事件查询请求: tenantId={}, eventName={}, page={}, size={}", 
-            headerTenantId, eventName, page, size);
+        log.debug("收到事件查询请求: appId={}, eventName={}, page={}, size={}", 
+            headerAppId, eventName, page, size);
         
-        // 租户ID校验
-        if (headerTenantId == null) {
-            throw new ForbiddenException(ErrorCode.TENANT_ID_REQUIRED);
+        // 应用ID校验
+        if (headerAppId == null) {
+            throw new ForbiddenException(ErrorCode.APP_ID_REQUIRED);
         }
-        if (tenantId != null && !tenantId.equals(headerTenantId)) {
-            throw new ForbiddenException(ErrorCode.TENANT_ID_MISMATCH);
+        if (appId != null && !appId.equals(headerAppId)) {
+            throw new ForbiddenException(ErrorCode.APP_ID_MISMATCH);
         }
         
         // 分页参数校验
@@ -102,8 +102,8 @@ public class EventQueryController {
         // 构建查询条件
         Specification<Event> spec = Specification.where(null);
         
-        // 租户ID过滤必须在最前面，这是关键的安全过滤
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("tenantId"), headerTenantId));
+        // 应用ID过滤必须在最前面，这是关键的安全过滤
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), headerAppId));
         
         // 事件名过滤
         if (eventName != null && !eventName.isBlank()) {
@@ -134,7 +134,7 @@ public class EventQueryController {
                 e.getEventName(),
                 e.getUserId(),
                 e.getSessionId(),
-                e.getTenantId(),
+                e.getAppId(),
                 e.getEventTime(),
                 e.getProperties()
             ))

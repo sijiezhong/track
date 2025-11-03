@@ -27,13 +27,12 @@ Track 是一套完全开源、可商用的全栈埋点分析解决方案，支�
 ```
 /                 # 仓库根目录
 ├─ README.md      # 项目简介 (本文件)
-├─ dev-guide.md   # 开发与贡献指南（TDD/接口/架构详述）
 ├─ LICENSE        # 开源协议（MIT/Apache-2.0）
 ├─ sdk/           # 前端埋点SDK项目
 ├─ server/        # 后端Spring Boot服务
-└─ analytics-web/ # 前端可视化React项目
+└─ analytics-web/ # 前端可视化React项目（数据分析平台）
 ```
-> 各子项目均自带独立 README/README.md 及构建说明，无需商业 key 或注册。
+> 各子项目均自带独立 README 及构建说明，无需商业 key 或注册。
 
 ## 快速开始
 
@@ -64,6 +63,7 @@ curl http://localhost:8080/actuator/health
 ```
 
 **访问服务**：
+- 数据分析平台：http://localhost:3000
 - API 文档：http://localhost:8080/swagger-ui.html
 - 健康检查：http://localhost:8080/actuator/health
 

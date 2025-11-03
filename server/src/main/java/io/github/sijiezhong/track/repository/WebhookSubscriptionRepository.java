@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface WebhookSubscriptionRepository extends JpaRepository<WebhookSubscription, Long> {
-    List<WebhookSubscription> findByTenantIdAndEnabledTrue(Integer tenantId);
+    List<WebhookSubscription> findByAppIdAndEnabledTrue(Integer appId);
 }
 
 

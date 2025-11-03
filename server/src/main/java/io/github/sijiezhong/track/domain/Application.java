@@ -22,7 +22,7 @@ public class Application {
 
   private Integer ownerId; // 所属用户ID（开发者/管理员）
 
-  private Integer tenantId; // 多租户ID
+  private Integer appId; // 应用ID（注：本表自身就是应用表，此字段用于关联父应用或分组）
 
   @Column(nullable = false)
   private LocalDateTime createTime = LocalDateTime.now(); // 创建时间
@@ -67,12 +67,12 @@ public class Application {
     this.ownerId = ownerId;
   }
 
-  public Integer getTenantId() {
-    return tenantId;
+  public Integer getAppId() {
+    return appId;
   }
 
-  public void setTenantId(Integer tenantId) {
-    this.tenantId = tenantId;
+  public void setAppId(Integer appId) {
+    this.appId = appId;
   }
 
   public LocalDateTime getCreateTime() {

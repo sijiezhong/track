@@ -26,7 +26,7 @@ public class Event {
   @Column(nullable = false, columnDefinition = "text")
   private String properties; // 事件属性(JSON字符串)
 
-  private Integer tenantId; // 多租户ID
+  private Integer appId; // 应用ID
 
   // 结构化补充字段
   @Column(length = 512)
@@ -107,12 +107,12 @@ public class Event {
     this.properties = properties;
   }
 
-  public Integer getTenantId() {
-    return tenantId;
+  public Integer getAppId() {
+    return appId;
   }
 
-  public void setTenantId(Integer tenantId) {
-    this.tenantId = tenantId;
+  public void setAppId(Integer appId) {
+    this.appId = appId;
   }
 
   public String getUa() { return ua; }

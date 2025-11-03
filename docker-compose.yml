@@ -68,6 +68,21 @@ services:
       retries: 3
       start_period: 60s
 
+  analytics-web:
+    build:
+      context: ./analytics-web
+      dockerfile: Dockerfile
+    container_name: track-analytics-web
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    networks:
+      - track-network
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+
 volumes:
   postgres_data:
     driver: local

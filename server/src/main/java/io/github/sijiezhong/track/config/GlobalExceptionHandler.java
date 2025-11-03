@@ -201,9 +201,9 @@ public class GlobalExceptionHandler {
     /**
      * 处理缺少必需请求头异常
      * 
-     * <p>对于X-Tenant-Id请求头缺失，根据路径判断返回403还是400：
-     * - 如果TenantGuardInterceptor已经处理过（设置403），保持403
-     * - 如果TenantGuardInterceptor没有启用，根据路径判断：
+     * <p>对于X-App-Id请求头缺失，根据路径判断返回403还是400：
+     * - 如果AppGuardInterceptor已经处理过（设置403），保持403
+     * - 如果AppGuardInterceptor没有启用，根据路径判断：
      *   - 受保护的敏感路径（admin、webhooks、analytics、export）返回403
      *   - 其他路径返回400（因为Controller会抛出MissingRequestHeaderException）
      * 
@@ -215,8 +215,8 @@ public class GlobalExceptionHandler {
         String headerName = e.getHeaderName();
         String requestPath = getRequestPath(e);
         
-        // 对于X-Tenant-Id请求头缺失的处理
-        if ("X-Tenant-Id".equals(headerName)) {
+        // 对于X-App-Id请求头缺失的处理
+        if ("X-App-Id".equals(headerName)) {
             // 如果是分析接口路径（有@PreAuthorize），检查认证状态
             // 注意：分析接口路径如 /api/v1/events/segmentation 需要先检查认证
             if (isAnalyticsPath(requestPath)) {
@@ -312,7 +312,7 @@ public class GlobalExceptionHandler {
         return path.startsWith("/api/v1/events/trend") || path.startsWith("/api/v1/events/path")
             || path.startsWith("/api/v1/events/retention") || path.startsWith("/api/v1/events/funnel")
             || path.startsWith("/api/v1/events/segmentation") || path.startsWith("/api/v1/events/heatmap");
-            // 注意：旧路径 /api/analytics 由TenantGuardInterceptor处理，不在这里
+            // 注意：旧路径 /api/analytics 由AppGuardInterceptor处理，不在这里
     }
     
     /**
@@ -369,8 +369,8 @@ public class GlobalExceptionHandler {
     /**
      * 处理路径未找到异常（404）
      * 
-     * <p>注意：如果路径是受保护路径但没有租户头，TenantGuardInterceptor应该已经拦截返回403。
-     * 如果到达这里，可能是TenantGuardInterceptor未启用，或者路径匹配有问题。
+     * <p>注意：如果路径是受保护路径但没有租户头，AppGuardInterceptor应该已经拦截返回403。
+     * 如果到达这里，可能是AppGuardInterceptor未启用，或者路径匹配有问题。
      * 我们检查路径是否应该是受保护的，如果是但没有租户头，返回403。
      * 
      * @param e 路径未找到异常
@@ -381,7 +381,7 @@ public class GlobalExceptionHandler {
         String path = e.getRequestURL() != null ? e.getRequestURL().toString() : "";
         log.warn("路径未找到: {}", path);
         
-        // 检查响应是否已经被设置为403（可能是TenantGuardInterceptor设置的）
+        // 检查响应是否已经被设置为403（可能是AppGuardInterceptor设置的）
         try {
             org.springframework.web.context.request.RequestAttributes requestAttributes = 
                 org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
@@ -398,7 +398,7 @@ public class GlobalExceptionHandler {
         }
         
         // 特殊处理：如果路径看起来像是受保护路径，检查是否有租户头
-        // 这用于处理TenantGuardInterceptor未启用或者拦截器没有正确拦截的情况
+        // 这用于处理AppGuardInterceptor未启用或者拦截器没有正确拦截的情况
         // 注意：这里需要检查所有受保护路径，包括旧路径 /api/analytics 的所有子路径
         if (isProtectedPath(path) || (path != null && path.startsWith("/api/analytics"))) {
             try {
@@ -407,10 +407,10 @@ public class GlobalExceptionHandler {
                 if (requestAttributes instanceof org.springframework.web.context.request.ServletRequestAttributes) {
                     jakarta.servlet.http.HttpServletRequest request = 
                         ((org.springframework.web.context.request.ServletRequestAttributes) requestAttributes).getRequest();
-                    String tenantHeader = request.getHeader("X-Tenant-Id");
-                    if (tenantHeader == null || tenantHeader.isBlank()) {
+                    String appHeader = request.getHeader("X-App-Id");
+                    if (appHeader == null || appHeader.isBlank()) {
                         // 受保护路径但没有租户头，返回403
-                        // 即使TenantGuardInterceptor已经设置了403状态码，我们也确保返回403响应
+                        // 即使AppGuardInterceptor已经设置了403状态码，我们也确保返回403响应
                         log.warn("受保护路径缺少租户ID请求头: {}", path);
                         ApiError error = new ApiError(
                             ErrorCode.FORBIDDEN.getHttpStatus(),

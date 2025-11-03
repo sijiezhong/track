@@ -14,9 +14,9 @@ public final class HttpHeaderConstants {
     }
     
     /**
-     * 租户ID请求头
+     * 应用ID请求头
      */
-    public static final String HEADER_TENANT_ID = "X-Tenant-Id";
+    public static final String HEADER_APP_ID = "X-App-Id";
     
     /**
      * 幂等键请求头

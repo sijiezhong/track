@@ -28,7 +28,7 @@ public class ForbiddenException extends BaseException {
     /**
      * 构造函数（使用特定错误码）
      * 
-     * @param errorCode 错误码（如TENANT_ID_MISMATCH）
+     * @param errorCode 错误码（如APP_ID_MISMATCH）
      */
     public ForbiddenException(ErrorCode errorCode) {
         super(errorCode);

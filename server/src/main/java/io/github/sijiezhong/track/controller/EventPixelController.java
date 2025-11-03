@@ -58,7 +58,7 @@ public class EventPixelController {
      * 
      * <p>
      * 返回1x1透明GIF图片并记录事件。支持通过查询参数传递事件信息。
-     * 为了支持跨域，tenantId 可以从 URL 参数或请求头获取（优先 URL 参数）。
+     * 为了支持跨域，appId 可以从 URL 参数或请求头获取（优先 URL 参数）。
      * 
      * <p>
      * 支持两种模式：
@@ -70,7 +70,7 @@ public class EventPixelController {
      * <p>
      * 参数支持完整名称和缩写：
      * <ul>
-     *   <li>tenantId / t: 租户ID</li>
+     *   <li>appId / t: 应用ID</li>
      *   <li>sessionId / s: 会话ID</li>
      *   <li>userId / u: 用户ID</li>
      *   <li>eventName / n: 事件名（单个模式）</li>
@@ -79,9 +79,9 @@ public class EventPixelController {
      *   <li>batch / bt: 批量模式标识（1=批量，0=单个）</li>
      * </ul>
      * 
-     * @param tenantIdHeader  租户ID请求头（可选）
-     * @param tenantId        租户ID URL参数（完整名，可选）
-     * @param tenantIdShort   租户ID URL参数（缩写 t，可选）
+     * @param appIdHeader  应用ID请求头（可选）
+     * @param appId        应用ID URL参数（完整名，可选）
+     * @param appIdShort   应用ID URL参数（缩写 t，可选）
      * @param eventName       事件名称（完整名，单个模式，可选）
      * @param eventNameShort  事件名称（缩写 n，单个模式，可选）
      * @param eventContent    事件内容 JSON（完整名，单个模式，可选）
@@ -99,13 +99,13 @@ public class EventPixelController {
     @GetMapping(value = "/api/v1/pixel.gif")
     @Operation(summary = "像素上报：返回1x1 GIF 并记录事件（支持批量）")
     public ResponseEntity<byte[]> pixel(
-            @Parameter(description = "租户头（可选）") 
-            @RequestHeader(value = HttpHeaderConstants.HEADER_TENANT_ID, required = false) Integer tenantIdHeader,
+            @Parameter(description = "应用头（可选）") 
+            @RequestHeader(value = HttpHeaderConstants.HEADER_APP_ID, required = false) Integer appIdHeader,
             
-            // 租户ID参数（支持完整名和缩写）
-            @Parameter(description = "租户ID URL参数（完整名，优先）") 
-            @RequestParam(name = "tenantId", required = false) Integer tenantId,
-            @RequestParam(name = "t", required = false) Integer tenantIdShort,
+            // 应用ID参数（支持完整名和缩写）
+            @Parameter(description = "应用ID URL参数（完整名，优先）") 
+            @RequestParam(name = "appId", required = false) Integer appId,
+            @RequestParam(name = "t", required = false) Integer appIdShort,
             
             // 单个事件参数（向后兼容，支持完整名和缩写）
             @Parameter(description = "事件名（单个模式，完整名）") 
@@ -132,8 +132,8 @@ public class EventPixelController {
             @RequestParam(name = "u", required = false) Integer userIdShort) {
 
         // 统一参数处理（优先使用缩写，回退到完整名）
-        Integer finalTenantId = tenantIdShort != null ? tenantIdShort 
-                              : (tenantId != null ? tenantId : tenantIdHeader);
+        Integer finalTenantId = appIdShort != null ? appIdShort 
+                              : (appId != null ? appId : appIdHeader);
         String finalSessionId = sessionIdShort != null ? sessionIdShort : sessionId;
         Integer finalUserId = userIdShort != null ? userIdShort : userId;
         String finalEventsB64 = eventsB64Short != null ? eventsB64Short : eventsB64;
@@ -142,7 +142,7 @@ public class EventPixelController {
         String finalEventContent = eventContentShort != null ? eventContentShort : eventContent;
         
         if (finalTenantId == null) {
-            log.warn("像素上报缺少 tenantId 参数");
+            log.warn("像素上报缺少 appId 参数");
             // 返回 GIF 但不记录事件
             return createGifResponse();
         }
@@ -162,13 +162,13 @@ public class EventPixelController {
     /**
      * 处理批量像素上报
      * 
-     * @param tenantId 租户ID
+     * @param appId 应用ID
      * @param sessionId 会话ID
      * @param userId 用户ID
      * @param eventsB64 Base64编码的批量事件JSON数组
      * @return GIF响应
      */
-    private ResponseEntity<byte[]> handleBatchPixel(Integer tenantId, String sessionId, 
+    private ResponseEntity<byte[]> handleBatchPixel(Integer appId, String sessionId, 
                                                      Integer userId, String eventsB64) {
         try {
             // URL-safe Base64 解码（处理 + 和 / 被替换为 - 和 _ 的情况）
@@ -206,7 +206,7 @@ public class EventPixelController {
             for (PixelBatchEvent event : events) {
                 try {
                     EventCollectRequest req = new EventCollectRequest();
-                    req.setTenantId(tenantId);
+                    req.setAppId(appId);
                     req.setSessionId(sessionId);
                     req.setUserId(userId);
                     
@@ -226,12 +226,12 @@ public class EventPixelController {
                 }
             }
             
-            log.debug("批量像素上报成功: tenantId={}, count={}, saved={}", tenantId, events.size(), saved);
+            log.debug("批量像素上报成功: appId={}, count={}, saved={}", appId, events.size(), saved);
             
         } catch (IllegalArgumentException e) {
-            log.error("批量像素上报：Base64解码失败: tenantId={}", tenantId, e);
+            log.error("批量像素上报：Base64解码失败: appId={}", appId, e);
         } catch (Exception e) {
-            log.error("批量像素上报失败: tenantId={}", tenantId, e);
+            log.error("批量像素上报失败: appId={}", appId, e);
         }
         
         return createGifResponse();
@@ -240,21 +240,21 @@ public class EventPixelController {
     /**
      * 处理单个像素上报（向后兼容）
      * 
-     * @param tenantId 租户ID
+     * @param appId 应用ID
      * @param sessionId 会话ID
      * @param userId 用户ID
      * @param eventName 事件名称
      * @param eventContent 事件内容JSON字符串
      * @return GIF响应
      */
-    private ResponseEntity<byte[]> handleSinglePixel(Integer tenantId, String sessionId, 
+    private ResponseEntity<byte[]> handleSinglePixel(Integer appId, String sessionId, 
                                                       Integer userId, String eventName, 
                                                       String eventContent) {
-        log.debug("收到像素上报请求: tenantId={}, eventName={}, sessionId={}, hasEventContent={}", 
-                tenantId, eventName, sessionId, eventContent != null);
+        log.debug("收到像素上报请求: appId={}, eventName={}, sessionId={}, hasEventContent={}", 
+                appId, eventName, sessionId, eventContent != null);
 
         EventCollectRequest req = new EventCollectRequest();
-        req.setTenantId(tenantId);
+        req.setAppId(appId);
         req.setEventName(eventName != null ? eventName : "pixel");
         req.setSessionId(sessionId);
         req.setUserId(userId);

@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
  * Webhook管理控制器
  * 
  * <p>提供Webhook订阅的创建和管理功能，以及事件重放功能。
- * 所有操作都会进行租户隔离和权限验证。
+ * 所有操作都会进行应用隔离和权限验证。
  * 
  * @author sijie
  */
@@ -47,7 +47,7 @@ public class WebhookController {
     /**
      * 创建Webhook订阅
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @param sub Webhook订阅信息
      * @return 创建的Webhook订阅
      */
@@ -55,16 +55,16 @@ public class WebhookController {
     @Operation(summary = "创建订阅")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<WebhookSubscription>> create(
-            @Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId,
+            @Parameter(description = "应用头，必填") @RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId,
             @RequestBody WebhookSubscription sub) {
         
-        log.info("创建Webhook订阅请求: tenantId={}, url={}", tenantId, sub.getUrl());
+        log.info("创建Webhook订阅请求: appId={}, url={}", appId, sub.getUrl());
         
-        // 租户ID校验
-        if (sub.getTenantId() != null && !sub.getTenantId().equals(tenantId)) {
-            throw new ForbiddenException(ErrorCode.TENANT_ID_MISMATCH);
+        // 应用ID校验
+        if (sub.getAppId() != null && !sub.getAppId().equals(appId)) {
+            throw new ForbiddenException(ErrorCode.APP_ID_MISMATCH);
         }
-        sub.setTenantId(tenantId);
+        sub.setAppId(appId);
         sub.setCreateTime(LocalDateTime.now());
         sub.setUpdateTime(LocalDateTime.now());
         if (sub.getEnabled() == null) {
@@ -73,7 +73,7 @@ public class WebhookController {
         
         WebhookSubscription saved = repository.save(sub);
         
-        log.info("Webhook订阅创建成功: id={}, tenantId={}", saved.getId(), saved.getTenantId());
+        log.info("Webhook订阅创建成功: id={}, appId={}", saved.getId(), saved.getAppId());
         
         return ResponseEntity.status(HttpStatus.CREATED).body(ResponseUtil.success(saved));
     }
@@ -81,18 +81,18 @@ public class WebhookController {
     /**
      * 重放最近一次事件
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @return 操作结果
      */
     @PostMapping("/replay/latest")
     @Operation(summary = "重放最近一次事件")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> replayLatest(@RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId) {
-        log.info("重放最近一次事件请求: tenantId={}", tenantId);
+    public ResponseEntity<ApiResponse<Void>> replayLatest(@RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId) {
+        log.info("重放最近一次事件请求: appId={}", appId);
         
-        webhookService.replayLatest(tenantId);
+        webhookService.replayLatest(appId);
         
-        log.info("事件重放完成: tenantId={}", tenantId);
+        log.info("事件重放完成: appId={}", appId);
         
         return ResponseEntity.ok(ResponseUtil.success());
     }

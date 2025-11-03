@@ -19,7 +19,7 @@ public class EventCollectRequest {
     private Integer userId; // 用户ID（可选，匿名则为空）
 
     @JsonAlias({"project_id"})
-    private Integer tenantId; // 租户ID（可选）
+    private Integer appId; // 应用ID（可选）
 
     @JsonAlias({"event_content"})
     private JsonNode properties; // 事件属性(JSON对象，可选)
@@ -44,8 +44,8 @@ public class EventCollectRequest {
     public Integer getUserId() { return userId; }
     public void setUserId(Integer userId) { this.userId = userId; }
 
-    public Integer getTenantId() { return tenantId; }
-    public void setTenantId(Integer tenantId) { this.tenantId = tenantId; }
+    public Integer getAppId() { return appId; }
+    public void setAppId(Integer appId) { this.appId = appId; }
 
     public JsonNode getProperties() { return properties; }
     public void setProperties(JsonNode properties) { this.properties = properties; }

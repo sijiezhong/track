@@ -35,15 +35,15 @@ public class WebhookService {
         if (settings.isEnabled() && settings.getUrl() != null) {
             tryPostToUrl(settings.getUrl(), null, event);
         }
-        // 向当前租户的所有订阅发送
-        List<WebhookSubscription> subs = subscriptionRepository.findByTenantIdAndEnabledTrue(event.getTenantId());
+        // 向当前应用的所有订阅发送
+        List<WebhookSubscription> subs = subscriptionRepository.findByAppIdAndEnabledTrue(event.getAppId());
         for (WebhookSubscription s : subs) {
             tryPostToUrl(s.getUrl(), s.getSecret(), event);
         }
     }
 
-    public void replayLatest(Integer tenantId) {
-        List<Event> latestList = eventRepository.findLatestByTenant(tenantId);
+    public void replayLatest(Integer appId) {
+        List<Event> latestList = eventRepository.findLatestByTenant(appId);
         if (latestList.isEmpty()) return;
         onEvent(latestList.get(0));
     }
@@ -51,7 +51,7 @@ public class WebhookService {
     private void tryPostToUrl(String url, String secret, Event event) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        String payload = "{\"eventId\":" + event.getId() + ",\"eventName\":\"" + event.getEventName() + "\",\"tenantId\":" + event.getTenantId() + "}";
+        String payload = "{\"eventId\":" + event.getId() + ",\"eventName\":\"" + event.getEventName() + "\",\"appId\":" + event.getAppId() + "}";
         if (secret != null && !secret.isEmpty()) {
             headers.set("X-Webhook-Signature", hmacSha256Base64(secret, payload));
         }

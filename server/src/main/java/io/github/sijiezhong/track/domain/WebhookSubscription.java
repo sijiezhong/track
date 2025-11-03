@@ -9,7 +9,7 @@ public class WebhookSubscription {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Integer tenantId;
+    private Integer appId;
     private String url;
     private String secret;
     private Boolean enabled;
@@ -18,8 +18,8 @@ public class WebhookSubscription {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Integer getTenantId() { return tenantId; }
-    public void setTenantId(Integer tenantId) { this.tenantId = tenantId; }
+    public Integer getAppId() { return appId; }
+    public void setAppId(Integer appId) { this.appId = appId; }
     public String getUrl() { return url; }
     public void setUrl(String url) { this.url = url; }
     public String getSecret() { return secret; }

@@ -54,7 +54,7 @@ idempotency:
 
 audit:
   enabled: true
-tenant:
+app:
   guard:
     enabled: true
 

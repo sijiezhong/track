@@ -23,8 +23,8 @@ public enum ErrorCode {
     VALIDATION_ERROR(400, "参数验证失败"),
     
     // 业务错误码 (4xx范围，使用400-499)
-    TENANT_ID_REQUIRED(400, "租户ID不能为空"),
-    TENANT_ID_MISMATCH(403, "租户ID不匹配"),
+    APP_ID_REQUIRED(400, "应用ID不能为空"),
+    APP_ID_MISMATCH(403, "应用ID不匹配"),
     SESSION_ID_REQUIRED(400, "会话ID不能为空"),
     INVALID_SESSION_ID(400, "无效的会话ID"),
     EVENT_NAME_REQUIRED(400, "事件名称不能为空"),

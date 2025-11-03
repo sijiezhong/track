@@ -36,7 +36,7 @@ import java.util.List;
  * 
  * <p>
  * 提供事件数据采集上报的RESTful接口，支持单条和批量上报。
- * 支持幂等性、多租户隔离、自动字段补齐等功能。
+ * 支持幂等性、多应用隔离、自动字段补齐等功能。
  * 
  * @author sijie
  */
@@ -63,7 +63,7 @@ public class EventController {
      * 单条事件上报（POST）
      * 
      * @param idemKey        幂等键（可选）
-     * @param headerTenantId 租户ID请求头（可选）
+     * @param headerAppId 应用ID请求头（可选）
      * @param req            事件上报请求
      * @param httpRequest    HTTP请求对象
      * @return 事件创建结果
@@ -76,7 +76,7 @@ public class EventController {
     @PostMapping("/collect")
     public ResponseEntity<ApiResponse<IdempotentSummary>> collect(
             @Parameter(description = "幂等键，可选") @RequestHeader(value = HttpHeaderConstants.HEADER_IDEMPOTENCY_KEY, required = false) String idemKey,
-            @RequestHeader(value = HttpHeaderConstants.HEADER_TENANT_ID, required = false) Integer headerTenantId,
+            @RequestHeader(value = HttpHeaderConstants.HEADER_APP_ID, required = false) Integer headerAppId,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(schema = @Schema(implementation = EventCollectRequest.class))) @Valid @RequestBody EventCollectRequest req,
             HttpServletRequest httpRequest) {
 
@@ -93,8 +93,8 @@ public class EventController {
             }
         }
 
-        // 多租户校验与补齐
-        validateAndSetTenantId(req, headerTenantId);
+        // 多应用校验与补齐
+        validateAndSetAppId(req, headerAppId);
 
         // 标准化与自动补齐：将 UA/Referer/IP 写入 event_content
         enrichRequestWithHeaders(req, httpRequest);
@@ -116,22 +116,22 @@ public class EventController {
      * 单条事件上报（GET）
      * 
      * @param idemKey        幂等键（可选）
-     * @param headerTenantId 租户ID请求头（可选）
+     * @param headerAppId 应用ID请求头（可选）
      * @param eventName      事件名称
      * @param sessionId      会话ID
      * @param userId         用户ID（可选）
-     * @param tenantId       租户ID（可选）
+     * @param appId       应用ID（可选）
      * @return 事件创建结果
      */
     @Operation(summary = "单条事件上报（GET）", description = "通过查询参数提交单条事件；支持 Idempotency-Key 幂等")
     @GetMapping("/collect")
     public ResponseEntity<ApiResponse<IdempotentSummary>> collectByGet(
             @Parameter(description = "幂等键，可选") @RequestHeader(value = HttpHeaderConstants.HEADER_IDEMPOTENCY_KEY, required = false) String idemKey,
-            @RequestHeader(value = HttpHeaderConstants.HEADER_TENANT_ID, required = false) Integer headerTenantId,
+            @RequestHeader(value = HttpHeaderConstants.HEADER_APP_ID, required = false) Integer headerAppId,
             @Parameter(description = "事件名", required = true) @RequestParam(name = "eventName") String eventName,
             @Parameter(description = "会话ID", required = true) @RequestParam(name = "sessionId") String sessionId,
             @Parameter(description = "用户ID，可选") @RequestParam(name = "userId", required = false) Integer userId,
-            @Parameter(description = "租户ID，可选") @RequestParam(name = "tenantId", required = false) Integer tenantId) {
+            @Parameter(description = "应用ID，可选") @RequestParam(name = "appId", required = false) Integer appId) {
 
         log.debug("收到GET方式事件上报请求: eventName={}, sessionId={}", eventName, sessionId);
 
@@ -150,14 +150,14 @@ public class EventController {
         req.setSessionId(sessionId);
         req.setUserId(userId);
 
-        // 多租户校验与补齐
-        if (headerTenantId != null) {
-            if (tenantId != null && !tenantId.equals(headerTenantId)) {
-                throw new ForbiddenException(ErrorCode.TENANT_ID_MISMATCH);
+        // 多应用校验与补齐
+        if (headerAppId != null) {
+            if (appId != null && !appId.equals(headerAppId)) {
+                throw new ForbiddenException(ErrorCode.APP_ID_MISMATCH);
             }
-            req.setTenantId(tenantId == null ? headerTenantId : tenantId);
+            req.setAppId(appId == null ? headerAppId : appId);
         } else {
-            req.setTenantId(tenantId);
+            req.setAppId(appId);
         }
 
         var evt = eventService.save(req);
@@ -177,18 +177,18 @@ public class EventController {
     }
 
     /**
-     * 校验并设置租户ID
+     * 校验并设置应用ID
      * 
      * @param req            事件请求
-     * @param headerTenantId 请求头中的租户ID
+     * @param headerAppId 请求头中的应用ID
      */
-    private void validateAndSetTenantId(EventCollectRequest req, Integer headerTenantId) {
-        if (headerTenantId != null) {
-            if (req.getTenantId() != null && !req.getTenantId().equals(headerTenantId)) {
-                throw new ForbiddenException(ErrorCode.TENANT_ID_MISMATCH);
+    private void validateAndSetAppId(EventCollectRequest req, Integer headerAppId) {
+        if (headerAppId != null) {
+            if (req.getAppId() != null && !req.getAppId().equals(headerAppId)) {
+                throw new ForbiddenException(ErrorCode.APP_ID_MISMATCH);
             }
-            if (req.getTenantId() == null) {
-                req.setTenantId(headerTenantId);
+            if (req.getAppId() == null) {
+                req.setAppId(headerAppId);
             }
         }
     }

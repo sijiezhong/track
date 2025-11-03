@@ -39,15 +39,15 @@ public class EventStreamController {
     /**
      * 订阅事件SSE流
      * 
-     * <p>按租户维度订阅事件创建实时推送。客户端需要保持HTTP连接开启以接收事件。
+     * <p>按应用维度订阅事件创建实时推送。客户端需要保持HTTP连接开启以接收事件。
      * 
-     * @param tenantId 租户ID请求头（必填）
+     * @param appId 应用ID请求头（必填）
      * @return SSE发射器
      */
     @GetMapping("/stream")
-    @Operation(summary = "订阅事件SSE流", description = "按租户维度订阅事件创建实时推送")
-    public SseEmitter stream(@Parameter(description = "租户头，必填") @RequestHeader(HttpHeaderConstants.HEADER_TENANT_ID) Integer tenantId) {
-        log.info("客户端订阅事件流: tenantId={}", tenantId);
-        return broadcaster.subscribe(tenantId);
+    @Operation(summary = "订阅事件SSE流", description = "按应用维度订阅事件创建实时推送")
+    public SseEmitter stream(@Parameter(description = "应用头，必填") @RequestHeader(HttpHeaderConstants.HEADER_APP_ID) Integer appId) {
+        log.info("客户端订阅事件流: appId={}", appId);
+        return broadcaster.subscribe(appId);
     }
 }
