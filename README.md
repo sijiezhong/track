@@ -835,6 +835,8 @@ export default function Layout({ children }) {
 
 ## 3. 服务端详细需求
 
+> 原则：安全与访问控制、指标口径定义与计算、数据质量治理（字段治理/脱敏/去重/采样）、聚合与缓存等全部在服务端完成；Dashboard 仅负责渲染，不进行数据二次加工。
+
 ### 3.1 技术栈
 - Spring Boot 3.x + SpringDoc OpenAPI (自动生成Swagger)
 - PostgreSQL + Redis
@@ -1473,6 +1475,13 @@ public class Event {
 
 ## 4. 数据分析平台详细需求
 
+### 4.0 数据分析平台职责边界
+
+- 前端（Dashboard）不对数据做二次加工，只负责渲染、交互与下载触发。
+- 所有能在服务端处理的计算/聚合/过滤/分位/去重/采样/口径定义，均由服务端完成并通过接口直接返回可展示结果。
+- 仅以 `app_id` 区分项目；不引入组织/租户维度。
+- 前端允许的本地处理仅限于 UI 级显示格式化（例如千分位、单位符号）；严禁在前端执行统计口径计算或跨接口拼接聚合。
+
 ### 4.1 功能模块
 
 #### 4.1.1 用户权限管理
@@ -1501,6 +1510,8 @@ public class Event {
 - **错误分析**：JavaScript 错误统计
 
 ### 4.2 技术实现
+
+> 说明：本节涉及的所有统计口径与聚合均由服务端计算并通过接口输出；前端仅发起请求并直接渲染结果。
 
 #### 4.2.1 PV/UV 统计实现
 
@@ -1709,6 +1720,110 @@ class AnalyticsService {
   }
 }
 ```
+
+### 4.3 接口规范（服务端直接返回可渲染结果）
+
+- 获取 PV/UV 趋势
+  - `GET /api/analytics/pv-uv/series?appId&start&end&interval&timezone&includeBots=false`
+  - 响应：`{ series: [{ ts: string, pv: number, uv: number }], interval: string, timezone: string }`
+- 获取总体概览
+  - `GET /api/analytics/overview?appId&start&end&timezone&includeBots=false`
+  - 响应：`{ pv: number, uv: number, bounceRate: number, avgDurationSec: number, timezone: string }`
+- 页面分布 TopN
+  - `GET /api/analytics/pages/top?appId&start&end&limit=50&timezone`
+  - 响应：`{ list: [{ pageUrl: string, pv: number, uv: number, avgDurationSec: number }], total: number }`
+- 自定义事件聚合
+  - `GET /api/analytics/custom-events?appId&eventId&start&end&groupBy=day&timezone`
+  - 响应：`{ series: [{ ts: string, count: number }], total: number, groupBy: string }`
+- Web Vitals 分位
+  - `GET /api/analytics/web-vitals?appId&start&end&metric=LCP&timezone`
+  - 响应：`{ p50: number, p75: number, p95: number, unit: "ms" }`
+- 明细列表（用于审计/抽样）
+  - `GET /api/events?appId&start&end&type&keyword&page=1&size=50&timezone`
+  - 响应：`{ items: Array<Record<string, any>>, page: { index: number, size: number, total: number } }`
+
+说明：所有接口需由服务端完成聚合/过滤/分组与时区换算；前端严禁做本地重算或跨接口拼接聚合。
+
+首页大屏数据源对照（只读渲染）：
+- 概览卡片 → `GET /api/analytics/overview`
+- PV/UV 趋势 → `GET /api/analytics/pv-uv/series`
+- Web Vitals 分位 → `GET /api/analytics/web-vitals`
+- 页面 TopN → `GET /api/analytics/pages/top`
+- 事件类型分布 → `GET /api/analytics/events-distribution`
+- 告警摘要 → `GET /api/analytics/alerts/summary`
+
+### 4.4 时间与时区策略
+
+- 存储一律使用 UTC；接口支持 `timezone` 参数（例如 `Asia/Shanghai`）。
+- 聚合分桶按 `interval`（如 `minute|hour|day`）与 `timezone` 在服务端完成换算。
+- 响应建议包含：`timezone`、`interval` 与分桶边界，前端仅据此格式化坐标轴与时间显示。
+- 示例：
+  - 请求：`GET /api/analytics/pv-uv/series?appId=demo&start=2025-01-01T00:00:00Z&end=2025-01-02T00:00:00Z&interval=hour&timezone=Asia/Shanghai`
+  - 响应：`{ series: [{ ts: "2025-01-01 08:00", pv: 120, uv: 45 }], interval: "hour", timezone: "Asia/Shanghai" }`
+
+### 4.5 错误码与速率限制
+
+- 错误体规范：`{ code: string, message: string, hint?: string, traceId?: string }`
+- 常见错误码：
+  - `401` 未授权（会话失效/鉴权失败）
+  - `403` 禁止访问（无 `app_id` 权限）
+  - `429` 频率受限（附带 `Retry-After` 秒）
+  - `400/422` 参数不合法（包含 `hint` 指明字段）
+  - `500` 服务器异常（附 `traceId` 便于排查）
+- 前端处理：仅展示错误信息，不进行本地退避/重试策略；重试由服务端返回头指引。
+
+### 4.6 UI/UE 设计总览
+
+- 主题与风格：
+  - 明暗两套主题（默认浅色），可跟随系统；品牌主色/强调色/语义色（成功/警告/危险）。
+  - 字体层级：H1/H2/H3/Body/Caption；图表内标题与坐标系字号对齐页面层级。
+- 栅格与间距：
+  - 桌面端 12 栅格，容器间距 24px；卡片内边距 16px；移动端单列收敛。
+- 状态规范：
+  - 初始加载：骨架屏 + 灰态占位；空数据：插画+文案+操作建议；错误：提示条（含 traceId）+ 重试按钮。
+  - 刷新反馈：顶部轻提示（成功/失败）；异步导出：右上角通知与任务中心入口。
+- 交互一致性：
+  - 时间范围组件（快捷近 15 分钟/1 小时/24 小时/7 天，自定义支持时区）。
+  - 筛选器（app_id 必填，其他可选）；图表通用交互（tooltip、范围缩放、下载 PNG/SVG）。
+- 性能与体验：
+  - 首屏 1 次概览接口 + 并行必要接口；组件级缓存占位；避免首屏阻塞加载大型资源。
+
+### 4.7 首页大屏（Overview）
+
+- 顶部筛选栏（固定）：
+  - 必填：app_id；可选：时间范围、时区、是否包含机器人（includeBots）。
+  - 操作：刷新、导出概览（CSV/PNG）。
+- 桌面端栅格布局：
+  - 第一行（4 卡片等宽）：总 PV、总 UV、跳出率、平均停留时长（s）。
+    - 卡片元素：主指标值、副标题（时间范围）、环比变化（↑/↓%、语义色）。
+  - 第二行（2 列）：
+    - 左：PV/UV 趋势（区间缩放、tooltip 精准到分桶）。
+    - 右：Web Vitals 分位概览（LCP/FCP/CLS/FID/INP/TTFB 的 P50/P75/P95）。
+  - 第三行（2 列）：
+    - 左：页面 TopN（URL、PV、UV、平均停留，支持跳转页面详情）。
+    - 右：事件类型分布（饼/玫瑰图，自定义事件汇总为 custom）。
+  - 第四行（1 列）：
+    - 错误与性能告警摘要（近 24h 新增错误指纹、受影响用户、Top 错误；性能劣化提醒）。
+- 交互细节：
+  - 卡片点击跳转对应明细（PV/UV → 趋势；Web Vitals → 性能；错误摘要 → 错误）。
+  - 遵循筛选栏参数自动刷新；切换参数显示局部骨架屏；URL 记录查询参数便于分享。
+- 服务端接口对照：
+  - 概览卡片：`GET /api/analytics/overview`
+  - 趋势图：`GET /api/analytics/pv-uv/series`
+  - Web Vitals：`GET /api/analytics/web-vitals`
+  - 页面 TopN：`GET /api/analytics/pages/top`
+  - 事件分布：`GET /api/analytics/events-distribution`
+  - 告警摘要：`GET /api/analytics/alerts/summary`
+
+### 4.8 组件规范库
+
+- 指标卡（KPI Card）：主指标、单位、环比/同比、描述；支持紧凑/常规两种尺寸。
+- 趋势图（Line/Area）：支持双轴（PV/UV），可下载图片，tooltip 精确到分桶。
+- 饼/玫瑰图：悬浮显示占比与数量；空数据展示“暂无数据”。
+- TopN 表格：列宽自适应、固定表头、分页、排序、关键词检索；导出当前查询条件。
+- 通用筛选器：app_id（必选）、时间范围、时区、机器人过滤；支持清空与重置。
+- 时间选择器：快捷区间 + 自定义区间，展示相对时区提示。
+- 导出按钮：异步任务，返回下载链接；展示任务状态与失败原因。
 
 ## 5. 测试策略
 
