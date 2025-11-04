@@ -1,0 +1,60 @@
+{
+  "name": "@track/sdk",
+  "version": "1.0.0",
+  "description": "企业级开源埋点 SDK - 客户端库",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "browser": "./dist/index.umd.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./vite-plugin": {
+      "import": "./dist/vite-plugin/index.js",
+      "require": "./dist/vite-plugin/index.cjs",
+      "types": "./dist/vite-plugin/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "vite-plugin",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "type-check": "tsc --noEmit",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt . --check",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "tracking",
+    "analytics",
+    "sdk",
+    "埋点",
+    "数据采集"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "@vitest/ui": "^1.1.0",
+    "jsdom": "^23.0.1",
+    "oxfmt": "^0.9.0",
+    "oxlint": "^1.25.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vite-plugin-dts": "^3.6.4",
+    "vitest": "^1.1.0"
+  }
+}

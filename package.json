@@ -1,0 +1,21 @@
+{
+  "name": "track",
+  "version": "1.0.0",
+  "private": true,
+  "description": "企业级开源埋点 SDK",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "oxfmt": "^0.9.0",
+    "oxlint": "^1.25.0"
+  },
+  "lint-staged": {
+    "packages/client-sdk/**/*.{js,ts,tsx,vue,css,md,json}": [
+      "oxfmt",
+      "oxlint --fix"
+    ]
+  }
+}
