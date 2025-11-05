@@ -28,12 +28,12 @@ jobs:
       # Java 缓存与安装移动到 test_server 阶段，避免空路径缓存错误
 
       - name: 写入 SSH 私钥
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           umask 077
-          cat > ~/.ssh/id_rsa << 'KEYEOF'
-${{ secrets.SERVER_SSH_KEY }}
-KEYEOF
+          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
@@ -139,12 +139,12 @@ KEYEOF
           path: artifacts
 
       - name: 准备 SSH（再次确保）
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           umask 077
-          cat > ~/.ssh/id_rsa << 'KEYEOF'
-${{ secrets.SERVER_SSH_KEY }}
-KEYEOF
+          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
@@ -211,12 +211,12 @@ KEYEOF
     needs: provision_and_deploy
     steps:
       - name: 准备 SSH（post_check）
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           umask 077
-          cat > ~/.ssh/id_rsa << 'KEYEOF'
-${{ secrets.SERVER_SSH_KEY }}
-KEYEOF
+          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
