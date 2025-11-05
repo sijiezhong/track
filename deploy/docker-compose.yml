@@ -1,8 +1,36 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: track-postgres
+    environment:
+      - POSTGRES_DB=track
+      - POSTGRES_USER=track
+      - POSTGRES_PASSWORD=track
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - track-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: track-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    networks:
+      - track-net
+
   api:
     build:
       context: ../packages/server
     container_name: track-api
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - postgres
+      - redis
     restart: unless-stopped
     networks:
       - track-net
@@ -27,5 +55,9 @@ services:
 networks:
   track-net:
     driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
 
 
