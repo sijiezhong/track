@@ -11,30 +11,21 @@ import PageLayout from "@/components/layout/Page";
 
 const withLayout = (el: JSX.Element) => <PageLayout>{el}</PageLayout>;
 
-const router = createBrowserRouter(
-  [
-    { path: "/", element: withLayout(<Overview />) },
-    { path: "/overview", element: withLayout(<Overview />) },
-    { path: "/analytics/trends", element: withLayout(<AnalyticsTrends />) },
-    { path: "/analytics/pages", element: withLayout(<AnalyticsPages />) },
-    { path: "/analytics/custom", element: withLayout(<AnalyticsCustom />) },
-    {
-      path: "/analytics/performance",
-      element: withLayout(<AnalyticsPerformance />),
-    },
-    { path: "/analytics/errors", element: withLayout(<AnalyticsErrors />) },
-    { path: "/user/behavior", element: withLayout(<UserBehavior />) },
-    { path: "/events", element: withLayout(<Events />) },
-  ],
+const router = createBrowserRouter([
+  { path: "/", element: withLayout(<Overview />) },
+  { path: "/overview", element: withLayout(<Overview />) },
+  { path: "/analytics/trends", element: withLayout(<AnalyticsTrends />) },
+  { path: "/analytics/pages", element: withLayout(<AnalyticsPages />) },
+  { path: "/analytics/custom", element: withLayout(<AnalyticsCustom />) },
   {
-    future: {
-      v7_startTransition: true,
-    },
+    path: "/analytics/performance",
+    element: withLayout(<AnalyticsPerformance />),
   },
-);
+  { path: "/analytics/errors", element: withLayout(<AnalyticsErrors />) },
+  { path: "/user/behavior", element: withLayout(<UserBehavior />) },
+  { path: "/events", element: withLayout(<Events />) },
+]);
 
 export default function App() {
-  return (
-    <RouterProvider router={router} future={{ v7_startTransition: true }} />
-  );
+  return <RouterProvider router={router} />;
 }

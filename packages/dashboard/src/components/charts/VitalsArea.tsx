@@ -18,7 +18,6 @@ export default function VitalsArea({
       container: ref.current,
       autoFit: true,
       height: 300,
-      padding: [16, 24, 40, 48],
     });
     const safe = Array.isArray(series) ? series : [];
     const data = [
