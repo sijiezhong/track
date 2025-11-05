@@ -18,101 +18,27 @@ echo "=========================================="
 mkdir -p $APP_DIR
 cd $APP_DIR
 
-# 1. 检查并安装 Docker
-echo "检查 Docker..."
+# 验证依赖是否已安装
+echo "验证依赖..."
 if ! command -v docker &> /dev/null; then
-    echo "安装 Docker..."
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    
-    # 下载Docker GPG密钥（带重试）
-    echo "下载 Docker GPG 密钥..."
-    GPG_SUCCESS=false
-    for i in {1..5}; do
-        if curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg 2>/dev/null; then
-            GPG_SUCCESS=true
-            break
-        fi
-        echo "第 $i 次尝试失败，5秒后重试..."
-        sleep 5
-    done
-    
-    if [ "$GPG_SUCCESS" = false ]; then
-        echo "警告: 无法从Docker官方源下载密钥，使用Ubuntu官方仓库安装Docker..."
-        apt-get update
-        apt-get install -y docker.io containerd
-        systemctl enable docker
-        systemctl start docker
-        echo "Docker 安装完成（使用Ubuntu仓库版本）"
-    else
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-        apt-get update
-        apt-get install -y docker-ce docker-ce-cli containerd.io
-        systemctl enable docker
-        systemctl start docker
-        echo "Docker 安装完成（使用Docker官方版本）"
-    fi
-else
-    echo "Docker 已安装"
+    echo "错误: Docker 未安装，请先运行依赖安装步骤"
+    exit 1
 fi
+echo "✓ Docker 已安装: $(docker --version)"
 
-# 2. 检查并安装 Docker Compose
-echo "检查 Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
-    echo "安装 Docker Compose..."
-    COMPOSE_SUCCESS=false
-    for i in {1..5}; do
-        if curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose 2>/dev/null; then
-            COMPOSE_SUCCESS=true
-            break
-        fi
-        echo "第 $i 次尝试失败，5秒后重试..."
-        sleep 5
-    done
-    
-    if [ "$COMPOSE_SUCCESS" = false ]; then
-        echo "警告: 无法从GitHub下载Docker Compose，尝试使用apt安装docker-compose-plugin..."
-        # 如果Docker已安装，尝试安装docker-compose-plugin
-        if command -v docker &> /dev/null; then
-            apt-get update
-            if apt-get install -y docker-compose-plugin 2>/dev/null; then
-                # 创建docker-compose包装脚本
-                cat > /usr/local/bin/docker-compose << 'COMPOSE_SCRIPT'
-#!/bin/bash
-docker compose "$@"
-COMPOSE_SCRIPT
-                chmod +x /usr/local/bin/docker-compose
-                echo "Docker Compose 安装完成（使用docker-compose-plugin）"
-            else
-                echo "错误: 无法安装 Docker Compose"
-                exit 1
-            fi
-        else
-            echo "错误: Docker未安装，无法安装Docker Compose"
-            exit 1
-        fi
-    else
-        chmod +x /usr/local/bin/docker-compose
-        echo "Docker Compose 安装完成（使用GitHub版本）"
-    fi
-else
-    echo "Docker Compose 已安装"
+    echo "错误: Docker Compose 未安装，请先运行依赖安装步骤"
+    exit 1
 fi
+echo "✓ Docker Compose 已安装: $(docker-compose --version)"
 
-# 3. 检查并安装 Nginx
-echo "检查 Nginx..."
 if ! command -v nginx &> /dev/null; then
-    echo "安装 Nginx..."
-    apt-get update
-    apt-get install -y nginx
-    systemctl enable nginx
-    systemctl start nginx
-    echo "Nginx 安装完成"
-else
-    echo "Nginx 已安装"
+    echo "错误: Nginx 未安装，请先运行依赖安装步骤"
+    exit 1
 fi
+echo "✓ Nginx 已安装: $(nginx -v 2>&1)"
 
-# 4. 加载 Docker 镜像
+# 1. 加载 Docker 镜像
 echo "加载 Docker 镜像..."
 if [ -f "$APP_DIR/track-server.tar.gz" ]; then
     docker load < "$APP_DIR/track-server.tar.gz"
@@ -121,7 +47,7 @@ else
     echo "警告: 未找到 Docker 镜像文件"
 fi
 
-# 5. 配置 SSL 证书
+# 2. 配置 SSL 证书
 echo "配置 SSL 证书..."
 if ! command -v certbot &> /dev/null; then
     echo "安装 Certbot..."
@@ -161,7 +87,7 @@ else
     echo "SSL 证书已存在"
 fi
 
-# 6. 配置 Nginx
+# 3. 配置 Nginx
 echo "配置 Nginx..."
 mkdir -p $NGINX_SITE_DIR $NGINX_ENABLE_DIR
 cp $NGINX_CONF "$NGINX_SITE_DIR/$DOMAIN"
@@ -174,13 +100,13 @@ sed -i "s/track.zhongsijie.cn/$DOMAIN/g" "$NGINX_SITE_DIR/$DOMAIN"
 nginx -t && systemctl reload nginx
 echo "Nginx 配置完成"
 
-# 7. 启动 Docker Compose 服务
+# 4. 启动 Docker Compose 服务
 echo "启动 Docker Compose 服务..."
 cd $APP_DIR
 docker-compose -f $COMPOSE_FILE down || true
 docker-compose -f $COMPOSE_FILE up -d
 
-# 8. 等待服务启动
+# 5. 等待服务启动
 echo "等待服务启动..."
 sleep 10
 
@@ -188,7 +114,7 @@ sleep 10
 echo "检查服务状态..."
 docker-compose -f $COMPOSE_FILE ps
 
-# 9. 配置 Certbot 自动续期
+# 6. 配置 Certbot 自动续期
 echo "配置 Certbot 自动续期..."
 if ! systemctl list-units --type=timer | grep -q certbot.timer; then
     systemctl enable certbot.timer
