@@ -57,9 +57,10 @@ jobs:
             cd /opt/track
 
             # 写入环境变量文件（单一 SERVER_SECRET，多行 .env 内容）
-            cat > .env <<'EOF'
+            # 使用 ENV_EOF 作为标记，避免与其他 heredoc 的 EOF 冲突
+            cat > .env <<ENV_EOF
             ${{ secrets.SERVER_SECRET }}
-            EOF
+            ENV_EOF
             # 补充镜像命名所需变量
             echo "GITHUB_REPO_OWNER=${{ github.repository_owner }}" >> .env
 
