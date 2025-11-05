@@ -94,10 +94,7 @@ jobs:
                 if command -v docker &> /dev/null; then
                   apt-get update
                   if apt-get install -y docker-compose-plugin 2>/dev/null; then
-                    cat > /usr/local/bin/docker-compose << 'COMPOSE_SCRIPT'
-#!/bin/bash
-docker compose "$@"
-COMPOSE_SCRIPT
+                    printf '#!/bin/bash\nexec docker compose "$@"\n' > /usr/local/bin/docker-compose
                     chmod +x /usr/local/bin/docker-compose
                     echo "Docker Compose 安装完成（使用docker-compose-plugin）"
                   else
