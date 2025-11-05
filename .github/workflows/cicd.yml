@@ -1,0 +1,181 @@
+name: Build & Deploy Server
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat-*'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/track-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Run tests
+        run: ./mvnw -q -f packages/server test
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push image
+        run: |
+          docker build -f packages/server/Dockerfile -t $IMAGE_NAME:${{ github.sha }} .
+          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:${{ github.sha }}
+          docker push $IMAGE_NAME:latest
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            set -e
+            mkdir -p /opt/track/docker/traefik /opt/track/docker/letsencrypt /opt/track/docker/docker-data/postgres /opt/track/docker/docker-data/redis
+            cd /opt/track
+
+            # 写入环境变量文件（单一 SERVER_SECRET，多行 .env 内容）
+            cat > .env <<'EOF'
+            ${{ secrets.SERVER_SECRET }}
+            EOF
+            # 补充镜像命名所需变量
+            echo "GITHUB_REPO_OWNER=${{ github.repository_owner }}" >> .env
+
+            # 写入 Traefik 静态配置
+            cat > docker/traefik/traefik.yml <<'EOF'
+            log:
+              level: INFO
+            api:
+              dashboard: true
+            providers:
+              file:
+                directory: /etc/traefik/dynamic
+                watch: true
+            entryPoints:
+              web:
+                address: ":80"
+              websecure:
+                address: ":443"
+            EOF
+
+            # 写入 Traefik 动态配置
+            cat > docker/traefik/dynamic.yml <<'EOF'
+            http:
+              middlewares:
+                redirect-to-https:
+                  redirectScheme:
+                    scheme: https
+                    permanent: true
+
+              routers:
+                http-catchall:
+                  rule: HostRegexp(`{any:.+}`)
+                  entryPoints:
+                    - web
+                  middlewares:
+                    - redirect-to-https
+                  service: noop
+
+              services:
+                noop:
+                  loadBalancer:
+                    servers:
+                      - url: http://0.0.0.0
+            EOF
+
+            # 写入生产 docker-compose 文件
+            cat > docker/docker-compose.prod.yml <<'EOF'
+            version: "3.9"
+            services:
+              traefik:
+                image: traefik:2.11
+                command:
+                  - --providers.file.directory=/etc/traefik/dynamic
+                  - --providers.file.watch=true
+                  - --entrypoints.web.address=:80
+                  - --entrypoints.websecure.address=:443
+                  - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}
+                  - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+                  - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+                  - --api.dashboard=true
+                ports:
+                  - "80:80"
+                  - "443:443"
+                volumes:
+                  - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+                  - ./traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
+                  - ./letsencrypt:/letsencrypt
+                  - /var/run/docker.sock:/var/run/docker.sock:ro
+                restart: unless-stopped
+
+              postgres:
+                image: postgres:15
+                environment:
+                  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+                volumes:
+                  - ./docker-data/postgres:/var/lib/postgresql/data
+                restart: unless-stopped
+
+              redis:
+                image: redis:7
+                command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+                volumes:
+                  - ./docker-data/redis:/data
+                restart: unless-stopped
+
+              server:
+                image: ghcr.io/${GITHUB_REPO_OWNER}/track-server:latest
+                environment:
+                  - SPRING_PROFILES_ACTIVE=prod
+                  - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/postgres
+                  - SPRING_DATASOURCE_USERNAME=postgres
+                  - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+                  - SPRING_DATA_REDIS_HOST=redis
+                  - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+                  - SERVER_PORT=8080
+                  - TZ=Asia/Shanghai
+                  - CORS_ALLOWED_ORIGINS=https://${APP_DOMAIN}
+                depends_on:
+                  - postgres
+                  - redis
+                labels:
+                  - traefik.enable=true
+                  - traefik.http.routers.track.rule=Host(`${APP_DOMAIN}`)
+                  - traefik.http.routers.track.entrypoints=websecure
+                  - traefik.http.routers.track.tls.certresolver=le
+                  - traefik.http.services.track.loadbalancer.server.port=8080
+                restart: unless-stopped
+
+            networks:
+              default:
+                name: track-net
+            EOF
+
+            # 拉取镜像并启动
+            docker compose -f docker/docker-compose.prod.yml --env-file .env pull
+            docker compose -f docker/docker-compose.prod.yml --env-file .env up -d --remove-orphans
+
+            # 可选清理
+            docker system prune -f || true
+
