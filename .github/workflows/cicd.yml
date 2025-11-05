@@ -57,6 +57,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
+      - name: Create deployment directory
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "mkdir -p /opt/track"
+
       - name: Copy files to server
         run: |
           scp -o StrictHostKeyChecking=no -P ${{ env.SERVER_PORT }} packages/server/docker-compose.prod.yml ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
