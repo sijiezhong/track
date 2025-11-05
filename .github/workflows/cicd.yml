@@ -173,6 +173,23 @@ jobs:
                 name: track-net
             EOF
 
+            # 配置 Docker 镜像加速器（解决国内访问 Docker Hub 超时问题）
+            if [ ! -f /etc/docker/daemon.json ]; then
+              mkdir -p /etc/docker
+              cat > /etc/docker/daemon.json <<'EOF'
+              {
+                "registry-mirrors": [
+                  "https://docker.mirrors.ustc.edu.cn",
+                  "https://hub-mirror.c.163.com",
+                  "https://mirror.baidubce.com"
+                ]
+              }
+              EOF
+              systemctl daemon-reload
+              systemctl restart docker || service docker restart || true
+              sleep 3
+            fi
+
             # 拉取镜像并启动
             docker compose -f docker/docker-compose.prod.yml --env-file .env pull
             docker compose -f docker/docker-compose.prod.yml --env-file .env up -d --remove-orphans
