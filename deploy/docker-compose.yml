@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ../packages/server
+    container_name: track-api
+    restart: unless-stopped
+    networks:
+      - track-net
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: track-nginx
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./static:/usr/share/nginx/html:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped
+    networks:
+      - track-net
+
+networks:
+  track-net:
+    driver: bridge
+
+

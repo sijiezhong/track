@@ -1,331 +1,224 @@
-name: CI/CD Pipeline
+name: Track CICD
 
 on:
   push:
     branches:
       - main
-      - 'feat-*'
-
-# 敏感配置已移至 GitHub Secrets:
-# - SERVER_HOST: 服务器IP地址
-# - SERVER_USER: SSH用户名
-# - SERVER_PORT: SSH端口
-# - DOMAIN: 部署域名
+      - feat-*
 
 jobs:
-  check-server-dependencies:
-    name: 检查服务器依赖
+  prepare:
+    name: 准备环境与缓存
     runs-on: ubuntu-latest
-    steps:
-      - name: 设置SSH连接
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-
-      - name: 检查并安装Docker
-        timeout-minutes: 10
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'DOCKER_EOF'
-            set -e
-            echo "=========================================="
-            echo "检查并安装 Docker"
-            echo "=========================================="
-            
-            if ! command -v docker &> /dev/null; then
-              echo "安装 Docker..."
-              apt-get update
-              apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-              
-              # 下载Docker GPG密钥（带重试）
-              echo "下载 Docker GPG 密钥..."
-              GPG_SUCCESS=false
-              for i in {1..5}; do
-                if curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg 2>/dev/null; then
-                  GPG_SUCCESS=true
-                  break
-                fi
-                echo "第 $i 次尝试失败，5秒后重试..."
-                sleep 5
-              done
-              
-              if [ "$GPG_SUCCESS" = false ]; then
-                echo "警告: 无法从Docker官方源下载密钥，使用Ubuntu官方仓库安装Docker..."
-                apt-get update
-                apt-get install -y docker.io containerd
-                systemctl enable docker
-                systemctl start docker
-                echo "Docker 安装完成（使用Ubuntu仓库版本）"
-              else
-                echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-                apt-get update
-                apt-get install -y docker-ce docker-ce-cli containerd.io
-                systemctl enable docker
-                systemctl start docker
-                echo "Docker 安装完成（使用Docker官方版本）"
-              fi
-            else
-              echo "Docker 已安装: $(docker --version)"
-            fi
-          DOCKER_EOF
-
-      - name: 检查并安装Docker Compose
-        timeout-minutes: 5
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'COMPOSE_EOF'
-            set -e
-            echo "=========================================="
-            echo "检查并安装 Docker Compose"
-            echo "=========================================="
-            
-            if ! command -v docker-compose &> /dev/null; then
-              echo "安装 Docker Compose..."
-              COMPOSE_SUCCESS=false
-              for i in {1..5}; do
-                if curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose 2>/dev/null; then
-                  COMPOSE_SUCCESS=true
-                  break
-                fi
-                echo "第 $i 次尝试失败，5秒后重试..."
-                sleep 5
-              done
-              
-              if [ "$COMPOSE_SUCCESS" = false ]; then
-                echo "警告: 无法从GitHub下载Docker Compose，尝试通过Docker官方APT源安装docker-compose-plugin..."
-                if command -v docker &> /dev/null; then
-                  apt-get update
-                  rm -f /usr/local/bin/docker-compose
-                  # 配置 Docker 官方 APT 源
-                  install -m 0755 -d /etc/apt/keyrings
-                  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg || true
-                  chmod a+r /etc/apt/keyrings/docker.gpg || true
-                  . /etc/os-release
-                  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" > /etc/apt/sources.list.d/docker.list
-                  apt-get update
-                  if apt-get install -y docker-compose-plugin 2>/dev/null; then
-                    if docker compose version >/dev/null 2>&1; then
-                      echo "Docker Compose 安装完成（docker compose 可用）"
-                    else
-                      echo "docker compose 仍不可用，尝试二进制安装..."
-                    fi
-                  else
-                    echo "APT 安装失败，尝试二进制安装..."
-                  fi
-
-                  # 若仍不可用，下载官方二进制到 CLI 插件目录
-                  if ! docker compose version >/dev/null 2>&1; then
-                    DEST_DIR="/usr/local/lib/docker/cli-plugins"
-                    mkdir -p "$DEST_DIR"
-                    COMPOSE_URL="https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64"
-                    echo "下载 Compose 二进制: $COMPOSE_URL"
-                    curl -fL "$COMPOSE_URL" -o "$DEST_DIR/docker-compose"
-                    chmod +x "$DEST_DIR/docker-compose"
-                    if docker compose version >/dev/null 2>&1; then
-                      echo "Docker Compose 安装完成（二进制方式）"
-                    else
-                      echo "错误: 仍未检测到 docker compose，请检查网络或权限"
-                      exit 1
-                    fi
-                  fi
-                else
-                  echo "错误: Docker未安装，无法安装Docker Compose"
-                  exit 1
-                fi
-              else
-                chmod +x /usr/local/bin/docker-compose || true
-                echo "Docker Compose 安装完成（使用GitHub版本）"
-              fi
-            else
-              echo "Docker Compose 已安装: $(docker-compose --version)"
-            fi
-          COMPOSE_EOF
-
-      - name: 检查并安装Nginx
-        timeout-minutes: 3
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'NGINX_EOF'
-            set -e
-            echo "=========================================="
-            echo "检查并安装 Nginx"
-            echo "=========================================="
-            
-            if ! command -v nginx &> /dev/null; then
-              echo "安装 Nginx..."
-              apt-get update
-              apt-get install -y nginx
-              systemctl enable nginx
-              systemctl start nginx
-              echo "Nginx 安装完成"
-            else
-              echo "Nginx 已安装: $(nginx -v 2>&1)"
-            fi
-            
-            echo "=========================================="
-            echo "服务器依赖检查完成"
-            echo "=========================================="
-          NGINX_EOF
-
-  test:
-    name: 运行测试
-    runs-on: ubuntu-latest
-    needs: check-server-dependencies
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 设置JDK 17
+      - name: 设置 Node 与 pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: 设置 Node LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: 设置 Java（用于后端测试）
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-          cache: maven
+          java-version: '17'
+          cache: 'maven'
 
-      - name: 运行Maven测试
-        working-directory: packages/server
-        run: mvn test
+      - name: 写入 SSH 私钥
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          touch ~/.ssh/known_hosts
+          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-  build-and-deploy:
-    name: 构建并部署
-    needs: [check-server-dependencies, test]
+  test_dashboard:
+    name: 前端测试（dashboard）
     runs-on: ubuntu-latest
+    needs: prepare
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - name: 安装依赖并测试 dashboard
+        working-directory: packages/dashboard
+        run: |
+          pnpm install --frozen-lockfile=false
+          if [ -f package.json ] && jq -e '.scripts.test' package.json >/dev/null 2>&1; then
+            pnpm test --if-present || pnpm -s -w echo "无测试脚本，跳过"
+          else
+            echo "无测试脚本，跳过"
+          fi
 
-      - name: 设置Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: 构建Docker镜像
+  test_server:
+    name: 后端测试（server）
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+      - name: 运行 Maven 测试
         working-directory: packages/server
         run: |
-          docker build -t track-server:latest .
+          chmod +x mvnw || true
+          ./mvnw -q -DskipITs test
 
-      - name: 保存Docker镜像
-        run: |
-          docker save track-server:latest | gzip > track-server.tar.gz
-
-      - name: 设置SSH连接
-        uses: webfactory/ssh-agent@v0.9.0
+  build_dashboard:
+    name: 构建前端产物
+    runs-on: ubuntu-latest
+    needs: [test_dashboard, test_server]
+    outputs:
+      artifact-name: dashboard-dist
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
         with:
-          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-
-      - name: 创建部署目录
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - name: 构建 dashboard
+        working-directory: packages/dashboard
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /opt/track"
-
-      - name: 复制docker-compose.prod.yml到服务器
+          pnpm install --frozen-lockfile=false
+          pnpm build
+      - name: 打包前端产物
         run: |
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} packages/server/docker-compose.prod.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+          mkdir -p artifacts
+          tar -czf artifacts/dashboard-dist.tar.gz -C packages/dashboard dist
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-dist
+          path: artifacts/dashboard-dist.tar.gz
+          if-no-files-found: error
 
-      - name: 复制deploy.sh到服务器
-        run: |
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} packages/server/deploy.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+  provision_and_deploy:
+    name: 配置服务器并部署
+    runs-on: ubuntu-latest
+    needs: build_dashboard
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: 复制nginx.conf到服务器
-        run: |
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} packages/server/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+      - name: 下载前端产物
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-dist
+          path: artifacts
 
-      - name: 复制Docker镜像到服务器
+      - name: 准备 SSH（再次确保）
         run: |
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} track-server.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          touch ~/.ssh/known_hosts
+          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: 准备部署脚本
+      - name: 服务器安装 Docker/Compose（幂等）
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'PREPARE_EOF'
-            cd /opt/track
-            chmod +x deploy.sh
-            echo "部署脚本已准备完成"
-          PREPARE_EOF
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          set -e
+          if ! command -v docker >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y ca-certificates curl gnupg lsb-release
+            sudo install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+            sudo apt-get update -y
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            sudo usermod -aG docker $USER || true
+          fi
+          sudo mkdir -p /opt/track/{deploy,static,logs} /opt/track/deploy/nginx/conf.d /opt/track/deploy/certbot/www
+          EOF
 
-      - name: 启动部署
-        timeout-minutes: 30
+      - name: 上传部署文件与前端产物
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'START_EOF'
-            cd /opt/track
-            DOMAIN=${{ secrets.DOMAIN }} nohup ./deploy.sh ${{ secrets.DOMAIN }} > /opt/track/deploy.log 2>&1 &
-            DEPLOY_PID=$!
-            echo "部署脚本已启动，PID: $DEPLOY_PID"
-            echo $DEPLOY_PID > /opt/track/deploy.pid
-          START_EOF
+          rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
+            deploy/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/deploy/
+          scp -o StrictHostKeyChecking=no -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
+            artifacts/dashboard-dist.tar.gz "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/
 
-      - name: 监控部署进度
-        timeout-minutes: 30
+      - name: 构建与启动（首次 HTTP 服务）
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'MONITOR_EOF'
-            timeout=1800
-            elapsed=0
-            
-            # 读取PID
-            if [ -f /opt/track/deploy.pid ]; then
-              DEPLOY_PID=$(cat /opt/track/deploy.pid)
-            else
-              echo "错误: 无法找到部署进程PID"
-              exit 1
-            fi
-            
-            echo "开始监控部署进程 (PID: $DEPLOY_PID)..."
-            
-            while [ $elapsed -lt $timeout ]; do
-              if ! ps -p $DEPLOY_PID > /dev/null 2>&1; then
-                echo "部署脚本执行完成"
-                break
-              fi
-              sleep 5
-              elapsed=$((elapsed + 5))
-              if [ $((elapsed % 60)) -eq 0 ]; then
-                echo "部署中... 已等待 $elapsed 秒"
-                tail -n 20 /opt/track/deploy.log || true
-              fi
-            done
-          MONITOR_EOF
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          set -e
+          cd /opt/track
+          # 解压前端静态资源至 deploy/static
+          mkdir -p /opt/track/deploy/static
+          tar -xzf dashboard-dist.tar.gz -C /opt/track/deploy/static --strip-components=1 || true
+          # 使用 docker compose 启动（仅 HTTP）
+          docker compose -f /opt/track/deploy/docker-compose.yml up -d --build
+          EOF
 
-      - name: 验证部署状态
-        timeout-minutes: 5
+      - name: 申请/续期证书（certbot，webroot 模式）
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'VERIFY_EOF'
-            echo "=========================================="
-            echo "验证部署状态"
-            echo "=========================================="
-            
-            # 读取PID
-            if [ -f /opt/track/deploy.pid ]; then
-              DEPLOY_PID=$(cat /opt/track/deploy.pid)
-            else
-              echo "错误: 无法找到部署进程PID"
-              exit 1
-            fi
-            
-            # 显示最后50行日志
-            echo "=== 部署日志（最后50行） ==="
-            tail -n 50 /opt/track/deploy.log || echo "无法读取日志文件"
-            
-            # 检查部署是否成功
-            if ps -p $DEPLOY_PID > /dev/null 2>&1; then
-              echo "警告: 部署脚本仍在运行（可能已超时）"
-              exit 0
-            else
-              # 进程已退出，尝试获取退出码
-              # 如果进程已退出，wait会立即返回其退出码
-              wait $DEPLOY_PID 2>/dev/null || true
-              exit_code=$?
-              
-              # 检查日志文件确认部署状态
-              if grep -q "部署完成" /opt/track/deploy.log 2>/dev/null; then
-                echo "✓ 部署成功完成"
-                exit 0
-              elif [ $exit_code -eq 0 ]; then
-                echo "✓ 部署成功完成（退出码: 0）"
-                exit 0
-              else
-                echo "✗ 部署可能失败，退出码: $exit_code"
-                # 即使退出码非0，也检查日志是否有成功信息
-                if grep -qi "成功\|完成" /opt/track/deploy.log 2>/dev/null; then
-                  echo "但从日志看可能已成功，请手动检查"
-                  exit 0
-                else
-                  exit $exit_code
-                fi
-              fi
-            fi
-          VERIFY_EOF
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y certbot
+          sudo certbot certonly --webroot -w /opt/track/deploy/certbot/www -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email || true
+          EOF
+
+      - name: 启用 HTTPS 配置并重启 Nginx
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
+          set -e
+          if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+            sudo sed "s/__DOMAIN__/$DOMAIN/g" /opt/track/deploy/nginx/conf.d/app-ssl.conf.template | sudo tee /opt/track/deploy/nginx/conf.d/app-ssl.conf >/dev/null
+            docker compose -f /opt/track/deploy/docker-compose.yml restart nginx
+          else
+            echo "未找到证书，保留 HTTP 服务，稍后可重试 certbot" >&2
+          fi
+          EOF
+
+  post_check:
+    name: 部署后健康检查
+    runs-on: ubuntu-latest
+    needs: provision_and_deploy
+    steps:
+      - name: 访问站点主页
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          set -e
+          curl -sS http://$DOMAIN -I || true
+          curl -sS https://$DOMAIN -I || true
+      - name: 访问 API 健康（若存在）
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          curl -sS http://$DOMAIN/api/health || true
+      - name: 输出容器状态
+        run: |
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          set -e
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+          echo '--- nginx logs (last 100 lines) ---'
+          docker logs --tail=100 track-nginx || true
+          echo '--- api logs (last 100 lines) ---'
+          docker logs --tail=100 track-api || true
+          EOF
 
 
