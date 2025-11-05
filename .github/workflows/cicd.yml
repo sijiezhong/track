@@ -1,4 +1,4 @@
-name: Build & Deploy Server
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,212 +6,69 @@ on:
       - main
       - 'feat-*'
 
+env:
+  SERVER_HOST: 47.113.180.87
+  SERVER_USER: root
+  SERVER_PORT: 22
+  DOMAIN: track.zhongsijie.cn
+
 jobs:
-  build-and-deploy:
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    env:
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/track-server
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: '17'
+          distribution: 'temurin'
+          cache: maven
 
-      - name: Run tests
+      - name: Run Maven tests
         working-directory: packages/server
-        run: ./mvnw -q test
+        run: mvn test
 
-      - name: Setup Docker Buildx
+  build-and-deploy:
+    name: Build and Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & Push image
+      - name: Build Docker image
+        working-directory: packages/server
         run: |
-          docker build -f packages/server/Dockerfile -t $IMAGE_NAME:${{ github.sha }} packages/server
-          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:${{ github.sha }}
-          docker push $IMAGE_NAME:latest
+          docker build -t track-server:latest .
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          SERVER_SECRET: ${{ secrets.SERVER_SECRET }}
-          GITHUB_REPO_OWNER: ${{ github.repository_owner }}
+      - name: Save Docker image
+        run: |
+          docker save track-server:latest | gzip > track-server.tar.gz
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          envs: SERVER_SECRET,GITHUB_REPO_OWNER
-          script: |
-            set -e
-            mkdir -p /opt/track/docker/traefik /opt/track/docker/letsencrypt /opt/track/docker/docker-data/postgres /opt/track/docker/docker-data/redis
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Copy files to server
+        run: |
+          scp -o StrictHostKeyChecking=no -P ${{ env.SERVER_PORT }} packages/server/docker-compose.prod.yml ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -P ${{ env.SERVER_PORT }} packages/server/deploy.sh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -P ${{ env.SERVER_PORT }} packages/server/nginx.conf ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -P ${{ env.SERVER_PORT }} track-server.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << EOF
             cd /opt/track
-
-            # 写入环境变量文件（单一 SERVER_SECRET，多行 .env 内容）
-            # 使用环境变量方式传递，避免 heredoc 和特殊字符问题
-            echo "$SERVER_SECRET" > .env
-            # 补充镜像命名所需变量（从环境变量获取，避免 GitHub Actions 模板语法问题）
-            echo "GITHUB_REPO_OWNER=$GITHUB_REPO_OWNER" >> .env
-
-            # 写入 Traefik 静态配置（从 .env 读取 TRAEFIK_ACME_EMAIL）
-            source .env
-            cat > docker/traefik/traefik.yml <<EOF
-            log:
-              level: INFO
-            api:
-              dashboard: true
-            providers:
-              file:
-                directory: /etc/traefik/dynamic
-                watch: true
-            entryPoints:
-              web:
-                address: ":80"
-              websecure:
-                address: ":443"
-            certificatesResolvers:
-              le:
-                acme:
-                  email: ${TRAEFIK_ACME_EMAIL}
-                  storage: /letsencrypt/acme.json
-                  httpChallenge:
-                    entryPoint: web
-            EOF
-
-            # 写入 Traefik 动态配置
-            cat > docker/traefik/dynamic.yml <<'EOF'
-            http:
-              middlewares:
-                redirect-to-https:
-                  redirectScheme:
-                    scheme: https
-                    permanent: true
-
-              routers:
-                http-catchall:
-                  rule: HostRegexp(`{any:.+}`)
-                  entryPoints:
-                    - web
-                  middlewares:
-                    - redirect-to-https
-                  service: noop
-
-              services:
-                noop:
-                  loadBalancer:
-                    servers:
-                      - url: http://0.0.0.0
-            EOF
-
-            # 写入生产 docker-compose 文件
-            cat > docker/docker-compose.prod.yml <<'EOF'
-            version: "3.9"
-            services:
-              traefik:
-                image: traefik:2.11
-                command:
-                  - --providers.file.directory=/etc/traefik/dynamic
-                  - --providers.file.watch=true
-                  - --api.dashboard=true
-                ports:
-                  - "80:80"
-                  - "443:443"
-                volumes:
-                  - ./docker/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-                  - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
-                  - ./docker/letsencrypt:/letsencrypt
-                  - /var/run/docker.sock:/var/run/docker.sock:ro
-                restart: unless-stopped
-
-              postgres:
-                image: postgres:15
-                environment:
-                  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-                volumes:
-                  - ./docker-data/postgres:/var/lib/postgresql/data
-                healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U postgres"]
-                  interval: 10s
-                  timeout: 5s
-                  retries: 5
-                restart: unless-stopped
-
-              redis:
-                image: redis:7
-                command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
-                volumes:
-                  - ./docker-data/redis:/data
-                healthcheck:
-                  test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
-                  interval: 10s
-                  timeout: 3s
-                  retries: 5
-                restart: unless-stopped
-
-              server:
-                image: ghcr.io/${GITHUB_REPO_OWNER}/track-server:latest
-                environment:
-                  - SPRING_PROFILES_ACTIVE=prod
-                  - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/postgres
-                  - SPRING_DATASOURCE_USERNAME=postgres
-                  - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
-                  - SPRING_DATA_REDIS_HOST=redis
-                  - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
-                  - SERVER_PORT=8080
-                  - TZ=Asia/Shanghai
-                  - CORS_ALLOWED_ORIGINS=https://${APP_DOMAIN}
-                depends_on:
-                  postgres:
-                    condition: service_healthy
-                  redis:
-                    condition: service_healthy
-                labels:
-                  - traefik.enable=true
-                  - traefik.http.routers.track.rule=Host(`${APP_DOMAIN}`)
-                  - traefik.http.routers.track.entrypoints=websecure
-                  - traefik.http.routers.track.tls.certresolver=le
-                  - traefik.http.services.track.loadbalancer.server.port=8080
-                restart: unless-stopped
-
-            networks:
-              default:
-                name: track-net
-            EOF
-
-            # 配置 Docker 镜像加速器（解决国内访问 Docker Hub 超时问题）
-            if [ ! -f /etc/docker/daemon.json ]; then
-              mkdir -p /etc/docker
-              cat > /etc/docker/daemon.json <<'EOF'
-              {
-                "registry-mirrors": [
-                  "https://docker.mirrors.ustc.edu.cn",
-                  "https://hub-mirror.c.163.com",
-                  "https://mirror.baidubce.com"
-                ]
-              }
-              EOF
-              systemctl daemon-reload
-              systemctl restart docker || service docker restart || true
-              sleep 3
-            fi
-
-            # 拉取镜像并启动
-            docker compose -f docker/docker-compose.prod.yml --env-file .env pull
-            docker compose -f docker/docker-compose.prod.yml --env-file .env up -d --remove-orphans
-
-            # 可选清理
-            docker system prune -f || true
+            chmod +x deploy.sh
+            ./deploy.sh ${{ env.DOMAIN }}
+          EOF
 
