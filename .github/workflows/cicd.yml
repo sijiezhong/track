@@ -28,19 +28,16 @@ jobs:
       # Java 缓存与安装移动到 test_server 阶段，避免空路径缓存错误
 
       - name: 写入 SSH 私钥
-        env:
-          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          umask 077
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: 服务器安装 Docker/Compose（幂等，准备阶段执行）
         run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           if ! command -v docker >/dev/null 2>&1; then
             sudo apt-get update -y
@@ -139,19 +136,16 @@ jobs:
           path: artifacts
 
       - name: 准备 SSH（再次确保）
-        env:
-          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          umask 077
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: 初始化部署目录（按需创建）
         run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           sudo mkdir -p /opt/track/{deploy,static,logs,packages}
           sudo mkdir -p /opt/track/deploy/nginx/conf.d
@@ -160,17 +154,17 @@ jobs:
 
       - name: 上传部署文件与前端产物
         run: |
-          rsync -az -e "ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
+          rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
             deploy/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/deploy/
           # 同步后端源码，供 docker compose 在 /opt/track/deploy 相对路径 ../packages/server 构建
-          rsync -az -e "ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
+          rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
             packages/server/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/packages/server/
-          scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
+          scp -o StrictHostKeyChecking=no -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
             artifacts/dashboard-dist.tar.gz "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/
 
       - name: 构建与启动（首次 HTTP 服务）
         run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           cd /opt/track
           # 解压前端静态资源至 deploy/static
@@ -184,7 +178,7 @@ jobs:
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
           set -e
           sudo apt-get update -y
           sudo apt-get install -y certbot
@@ -195,7 +189,7 @@ jobs:
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
           set -e
           if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
             sudo sed "s/__DOMAIN__/$DOMAIN/g" /opt/track/deploy/nginx/conf.d/app-ssl.conf.template | sudo tee /opt/track/deploy/nginx/conf.d/app-ssl.conf >/dev/null
@@ -210,13 +204,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: provision_and_deploy
     steps:
-      - name: 准备 SSH（post_check）
-        env:
-          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+      - name: 准备 SSH（与前一致）
         run: |
           mkdir -p ~/.ssh
-          umask 077
-          printf "%s" "$SSH_KEY" > ~/.ssh/id_rsa
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
@@ -234,7 +225,7 @@ jobs:
           curl -sS http://$DOMAIN/api/health || true
       - name: 输出容器状态
         run: |
-          ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
           echo '--- nginx logs (last 100 lines) ---'
