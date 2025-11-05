@@ -147,7 +147,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
-          sudo mkdir -p /opt/track/{deploy,static,logs}
+          sudo mkdir -p /opt/track/{deploy,static,logs,packages}
           sudo mkdir -p /opt/track/deploy/nginx/conf.d
           sudo mkdir -p /opt/track/deploy/certbot/www
           EOF
@@ -156,6 +156,9 @@ jobs:
         run: |
           rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
             deploy/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/deploy/
+          # 同步后端源码，供 docker compose 在 /opt/track/deploy 相对路径 ../packages/server 构建
+          rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
+            packages/server/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/packages/server/
           scp -o StrictHostKeyChecking=no -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
             artifacts/dashboard-dist.tar.gz "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/
 
