@@ -6,11 +6,11 @@ on:
       - main
       - 'feat-*'
 
-env:
-  SERVER_HOST: 47.113.180.87
-  SERVER_USER: root
-  SERVER_PORT: 22
-  DOMAIN: track.zhongsijie.cn
+# 敏感配置已移至 GitHub Secrets:
+# - SERVER_HOST: 服务器IP地址
+# - SERVER_USER: SSH用户名
+# - SERVER_PORT: SSH端口
+# - DOMAIN: 部署域名
 
 jobs:
   test:
@@ -60,7 +60,7 @@ jobs:
       - name: Check and install server dependencies
         timeout-minutes: 15
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'INSTALL_EOF'
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'INSTALL_EOF'
             set -e
             
             echo "=========================================="
@@ -166,22 +166,22 @@ COMPOSE_SCRIPT
 
       - name: Create deployment directory
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} "mkdir -p /opt/track"
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /opt/track"
 
       - name: Copy files to server
         run: |
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ env.SERVER_PORT }} packages/server/docker-compose.prod.yml ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ env.SERVER_PORT }} packages/server/deploy.sh ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ env.SERVER_PORT }} packages/server/nginx.conf ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
-          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ env.SERVER_PORT }} track-server.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} packages/server/docker-compose.prod.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} packages/server/deploy.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} packages/server/nginx.conf ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
+          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -P ${{ secrets.SERVER_PORT }} track-server.tar.gz ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/track/
 
       - name: Deploy to server
         timeout-minutes: 30
         run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << DEPLOY_EOF
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << DEPLOY_EOF
             cd /opt/track
             chmod +x deploy.sh
-            DOMAIN=${{ env.DOMAIN }} nohup ./deploy.sh ${{ env.DOMAIN }} > /opt/track/deploy.log 2>&1 &
+            DOMAIN=${{ secrets.DOMAIN }} nohup ./deploy.sh ${{ secrets.DOMAIN }} > /opt/track/deploy.log 2>&1 &
             DEPLOY_PID=\$!
             echo "部署脚本已启动，PID: \$DEPLOY_PID"
             

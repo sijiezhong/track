@@ -5,8 +5,8 @@
 ## 前置要求
 
 - GitHub 仓库访问权限
-- 服务器 SSH 访问权限（IP: 47.113.180.87，用户名: root）
-- 域名已解析到服务器 IP（track.zhongsijie.cn）
+- 服务器 SSH 访问权限（需要知道服务器IP地址和SSH用户名）
+- 域名已解析到服务器 IP（需要知道部署域名）
 
 ## 阶段1：配置 SSH 密钥（本机执行）
 
@@ -33,12 +33,13 @@ ssh-keygen -t rsa -b 4096 -C "github-actions-deploy" -f ~/.ssh/track_deploy_key
 
 ```bash
 # 方式1：使用 ssh-copy-id（推荐）
-ssh-copy-id -i ~/.ssh/track_deploy_key.pub root@47.113.180.87
+# 替换 YOUR_SERVER_IP 为您的服务器IP地址，YOUR_USER 为SSH用户名
+ssh-copy-id -i ~/.ssh/track_deploy_key.pub YOUR_USER@YOUR_SERVER_IP
 
 # 方式2：手动复制（如果方式1失败）
 cat ~/.ssh/track_deploy_key.pub
-# 复制输出的内容，然后执行：
-ssh root@47.113.180.87 "mkdir -p ~/.ssh && echo '粘贴公钥内容' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh"
+# 复制输出的内容，然后执行（替换 YOUR_SERVER_IP 和 YOUR_USER）：
+ssh YOUR_USER@YOUR_SERVER_IP "mkdir -p ~/.ssh && echo '粘贴公钥内容' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh"
 ```
 
 **说明**：
@@ -50,8 +51,8 @@ ssh root@47.113.180.87 "mkdir -p ~/.ssh && echo '粘贴公钥内容' >> ~/.ssh/a
 在**本机**执行以下命令验证连接：
 
 ```bash
-# 使用私钥测试连接
-ssh -i ~/.ssh/track_deploy_key root@47.113.180.87 "echo 'SSH连接成功！'"
+# 使用私钥测试连接（替换 YOUR_SERVER_IP 和 YOUR_USER）
+ssh -i ~/.ssh/track_deploy_key YOUR_USER@YOUR_SERVER_IP "echo 'SSH连接成功！'"
 ```
 
 如果看到 "SSH连接成功！"，说明配置正确。
@@ -69,18 +70,36 @@ cat ~/.ssh/track_deploy_key
 
 **重要**：复制**全部**输出内容，包括 `-----BEGIN OPENSSH PRIVATE KEY-----` 和 `-----END OPENSSH PRIVATE KEY-----` 之间的所有内容。
 
-### 步骤2.2：添加 GitHub Secret
+### 步骤2.2：添加 GitHub Secrets
 
 1. 打开浏览器，访问您的 GitHub 仓库页面
 2. 点击 **Settings**（设置）标签
 3. 在左侧菜单中找到 **Secrets and variables** → **Actions**
-4. 点击 **New repository secret**（新建仓库密钥）
-5. 配置如下：
-   - **Name**（名称）: `SERVER_SSH_KEY`
-   - **Secret**（密钥）: 粘贴步骤2.1复制的私钥内容
-6. 点击 **Add secret**（添加密钥）
+4. 点击 **New repository secret**（新建仓库密钥），依次添加以下 Secrets：
 
-**验证**：确认 `SERVER_SSH_KEY` 已出现在 Secrets 列表中。
+   **必需 Secrets：**
+   
+   - **SERVER_SSH_KEY**
+     - **Name**: `SERVER_SSH_KEY`
+     - **Secret**: 粘贴步骤2.1复制的私钥内容（全部内容）
+   
+   - **SERVER_HOST**
+     - **Name**: `SERVER_HOST`
+     - **Secret**: 服务器IP地址（例如：`47.113.180.87`）
+   
+   - **SERVER_USER**
+     - **Name**: `SERVER_USER`
+     - **Secret**: SSH用户名（例如：`root`）
+   
+   - **SERVER_PORT**
+     - **Name**: `SERVER_PORT`
+     - **Secret**: SSH端口（默认：`22`）
+   
+   - **DOMAIN**
+     - **Name**: `DOMAIN`
+     - **Secret**: 部署域名（例如：`track.zhongsijie.cn`）
+
+**验证**：确认以上所有 Secrets 都已出现在 Secrets 列表中。
 
 ## 阶段3：提交代码（本机执行）
 
@@ -143,17 +162,17 @@ GitHub Actions 会自动执行以下步骤：
 
 ### 步骤4.4：验证部署
 
-部署完成后，在**本机**或浏览器中验证：
+部署完成后，在**本机**或浏览器中验证（替换 YOUR_DOMAIN 为您的域名）：
 
 ```bash
 # 在浏览器访问
-https://track.zhongsijie.cn
+https://YOUR_DOMAIN
 
 # 或者使用 curl 测试
-curl -I https://track.zhongsijie.cn
+curl -I https://YOUR_DOMAIN
 
 # 查看 API 文档
-https://track.zhongsijie.cn/swagger-ui.html
+https://YOUR_DOMAIN/swagger-ui.html
 ```
 
 ## 常见问题排查
@@ -177,9 +196,9 @@ https://track.zhongsijie.cn/swagger-ui.html
 
 **解决方案**：
 ```bash
-# 在服务器上执行（如果问题持续）
-ssh root@47.113.180.87
-certbot certonly --nginx -d track.zhongsijie.cn --non-interactive --agree-tos --email your-email@example.com
+# 在服务器上执行（如果问题持续，替换 YOUR_SERVER_IP, YOUR_USER, YOUR_DOMAIN）
+ssh YOUR_USER@YOUR_SERVER_IP
+certbot certonly --nginx -d YOUR_DOMAIN --non-interactive --agree-tos --email your-email@example.com
 ```
 
 ### 问题3：应用无法启动
@@ -188,8 +207,8 @@ certbot certonly --nginx -d track.zhongsijie.cn --non-interactive --agree-tos --
 
 **解决方案**：
 ```bash
-# SSH 到服务器查看日志
-ssh root@47.113.180.87
+# SSH 到服务器查看日志（替换 YOUR_SERVER_IP 和 YOUR_USER）
+ssh YOUR_USER@YOUR_SERVER_IP
 cd /opt/track
 docker-compose -f docker-compose.prod.yml logs app
 docker-compose -f docker-compose.prod.yml ps
@@ -201,8 +220,8 @@ docker-compose -f docker-compose.prod.yml ps
 
 **解决方案**：
 ```bash
-# SSH 到服务器检查 Nginx
-ssh root@47.113.180.87
+# SSH 到服务器检查 Nginx（替换 YOUR_SERVER_IP 和 YOUR_USER）
+ssh YOUR_USER@YOUR_SERVER_IP
 nginx -t  # 测试配置
 systemctl status nginx  # 查看状态
 journalctl -u nginx -n 50  # 查看日志
@@ -249,7 +268,8 @@ tail -f /var/log/nginx/track-error.log
 
 1. **定期更新服务器系统**：
    ```bash
-   ssh root@47.113.180.87
+   # 替换 YOUR_SERVER_IP 和 YOUR_USER
+   ssh YOUR_USER@YOUR_SERVER_IP
    apt update && apt upgrade -y
    ```
 
