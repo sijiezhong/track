@@ -9,6 +9,16 @@ NGINX_CONF="$APP_DIR/nginx.conf"
 NGINX_SITE_DIR="/etc/nginx/sites-available"
 NGINX_ENABLE_DIR="/etc/nginx/sites-enabled"
 
+# 选择可用的 Compose 命令
+if docker compose version >/dev/null 2>&1; then
+    DC="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    DC="docker-compose"
+else
+    echo "错误: 未检测到 docker compose 或 docker-compose，请先安装 docker-compose-plugin 或 docker-compose。"
+    exit 1
+fi
+
 echo "=========================================="
 echo "开始部署 Track 应用"
 echo "域名: $DOMAIN"
@@ -26,11 +36,10 @@ if ! command -v docker &> /dev/null; then
 fi
 echo "✓ Docker 已安装: $(docker --version)"
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "错误: Docker Compose 未安装，请先运行依赖安装步骤"
-    exit 1
+# Compose 检查
+if [ -n "$DC" ]; then
+    echo "✓ Compose 可用: $($DC version 2>/dev/null || echo using $DC)"
 fi
-echo "✓ Docker Compose 已安装: $(docker-compose --version)"
 
 if ! command -v nginx &> /dev/null; then
     echo "错误: Nginx 未安装，请先运行依赖安装步骤"
@@ -103,8 +112,8 @@ echo "Nginx 配置完成"
 # 4. 启动 Docker Compose 服务
 echo "启动 Docker Compose 服务..."
 cd $APP_DIR
-docker-compose -f $COMPOSE_FILE down || true
-docker-compose -f $COMPOSE_FILE up -d
+$DC -f $COMPOSE_FILE down || true
+$DC -f $COMPOSE_FILE up -d
 
 # 5. 等待服务启动
 echo "等待服务启动..."
@@ -112,7 +121,7 @@ sleep 10
 
 # 检查服务状态
 echo "检查服务状态..."
-docker-compose -f $COMPOSE_FILE ps
+$DC -f $COMPOSE_FILE ps
 
 # 6. 配置 Certbot 自动续期
 echo "配置 Certbot 自动续期..."
@@ -128,5 +137,5 @@ echo "=========================================="
 
 # 显示服务日志
 echo "应用日志 (最后20行):"
-docker-compose -f $COMPOSE_FILE logs --tail=20 app
+$DC -f $COMPOSE_FILE logs --tail=20 app
 
