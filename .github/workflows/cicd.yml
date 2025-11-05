@@ -35,6 +35,22 @@ jobs:
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
+      - name: 服务器安装 Docker/Compose（幂等，准备阶段执行）
+        run: |
+          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          set -e
+          if ! command -v docker >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y ca-certificates curl gnupg lsb-release
+            sudo install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+            sudo apt-get update -y
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            sudo usermod -aG docker $USER || true
+          fi
+          EOF
+
   test_dashboard:
     name: 前端测试（dashboard）
     runs-on: ubuntu-latest
@@ -127,21 +143,13 @@ jobs:
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: 服务器安装 Docker/Compose（幂等）
+      - name: 初始化部署目录（按需创建）
         run: |
           ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
-          if ! command -v docker >/dev/null 2>&1; then
-            sudo apt-get update -y
-            sudo apt-get install -y ca-certificates curl gnupg lsb-release
-            sudo install -m 0755 -d /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-            sudo apt-get update -y
-            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-            sudo usermod -aG docker $USER || true
-          fi
-          sudo mkdir -p /opt/track/{deploy,static,logs} /opt/track/deploy/nginx/conf.d /opt/track/deploy/certbot/www
+          sudo mkdir -p /opt/track/{deploy,static,logs}
+          sudo mkdir -p /opt/track/deploy/nginx/conf.d
+          sudo mkdir -p /opt/track/deploy/certbot/www
           EOF
 
       - name: 上传部署文件与前端产物
