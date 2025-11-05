@@ -23,14 +23,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'pnpm'
+          # 注意：prepare 阶段不执行 pnpm install，避免产生空缓存目录
 
-      - name: 设置 Java（用于后端测试）
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'maven'
+      # Java 缓存与安装移动到 test_server 阶段，避免空路径缓存错误
 
       - name: 写入 SSH 私钥
         run: |
