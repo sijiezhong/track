@@ -48,7 +48,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'pnpm'
-      - name: 安装依赖并测试 dashboard
+      - name: 安装依赖并测试 dashboard（pnpm）
         working-directory: packages/dashboard
         run: |
           pnpm install --frozen-lockfile=false
@@ -90,7 +90,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'pnpm'
-      - name: 构建 dashboard
+      - name: 构建 dashboard（pnpm）
         working-directory: packages/dashboard
         run: |
           pnpm install --frozen-lockfile=false
