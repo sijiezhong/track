@@ -24,13 +24,34 @@ if ! command -v docker &> /dev/null; then
     echo "安装 Docker..."
     apt-get update
     apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-    systemctl enable docker
-    systemctl start docker
-    echo "Docker 安装完成"
+    
+    # 下载Docker GPG密钥（带重试）
+    echo "下载 Docker GPG 密钥..."
+    GPG_SUCCESS=false
+    for i in {1..5}; do
+        if curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg 2>/dev/null; then
+            GPG_SUCCESS=true
+            break
+        fi
+        echo "第 $i 次尝试失败，5秒后重试..."
+        sleep 5
+    done
+    
+    if [ "$GPG_SUCCESS" = false ]; then
+        echo "警告: 无法从Docker官方源下载密钥，使用Ubuntu官方仓库安装Docker..."
+        apt-get update
+        apt-get install -y docker.io containerd
+        systemctl enable docker
+        systemctl start docker
+        echo "Docker 安装完成（使用Ubuntu仓库版本）"
+    else
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        apt-get update
+        apt-get install -y docker-ce docker-ce-cli containerd.io
+        systemctl enable docker
+        systemctl start docker
+        echo "Docker 安装完成（使用Docker官方版本）"
+    fi
 else
     echo "Docker 已安装"
 fi
@@ -39,9 +60,41 @@ fi
 echo "检查 Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
     echo "安装 Docker Compose..."
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-    echo "Docker Compose 安装完成"
+    COMPOSE_SUCCESS=false
+    for i in {1..5}; do
+        if curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose 2>/dev/null; then
+            COMPOSE_SUCCESS=true
+            break
+        fi
+        echo "第 $i 次尝试失败，5秒后重试..."
+        sleep 5
+    done
+    
+    if [ "$COMPOSE_SUCCESS" = false ]; then
+        echo "警告: 无法从GitHub下载Docker Compose，尝试使用apt安装docker-compose-plugin..."
+        # 如果Docker已安装，尝试安装docker-compose-plugin
+        if command -v docker &> /dev/null; then
+            apt-get update
+            if apt-get install -y docker-compose-plugin 2>/dev/null; then
+                # 创建docker-compose包装脚本
+                cat > /usr/local/bin/docker-compose << 'COMPOSE_SCRIPT'
+#!/bin/bash
+docker compose "$@"
+COMPOSE_SCRIPT
+                chmod +x /usr/local/bin/docker-compose
+                echo "Docker Compose 安装完成（使用docker-compose-plugin）"
+            else
+                echo "错误: 无法安装 Docker Compose"
+                exit 1
+            fi
+        else
+            echo "错误: Docker未安装，无法安装Docker Compose"
+            exit 1
+        fi
+    else
+        chmod +x /usr/local/bin/docker-compose
+        echo "Docker Compose 安装完成（使用GitHub版本）"
+    fi
 else
     echo "Docker Compose 已安装"
 fi
