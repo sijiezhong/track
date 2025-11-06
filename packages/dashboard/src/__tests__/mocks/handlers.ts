@@ -14,8 +14,11 @@ export const handlers = [
   }),
 
   http.get("/api/analytics/pv-uv/series", ({ request }) => {
-    const url = new URL(request.url);
-    const interval = url.searchParams.get("interval") || "hour";
+    // 解析查询参数，兼容 Node.js 环境
+    const urlString =
+      typeof request.url === "string" ? request.url : request.url.toString();
+    const searchParams = new URLSearchParams(urlString.split("?")[1] || "");
+    const interval = searchParams.get("interval") || "hour";
 
     return HttpResponse.json({
       series: [
@@ -68,8 +71,11 @@ export const handlers = [
   }),
 
   http.get("/api/analytics/custom-events", ({ request }) => {
-    const url = new URL(request.url);
-    const groupBy = url.searchParams.get("groupBy") || "day";
+    // 解析查询参数，兼容 Node.js 环境
+    const urlString =
+      typeof request.url === "string" ? request.url : request.url.toString();
+    const searchParams = new URLSearchParams(urlString.split("?")[1] || "");
+    const groupBy = searchParams.get("groupBy") || "day";
 
     return HttpResponse.json({
       series: [
@@ -126,9 +132,12 @@ export const handlers = [
 
   // Events endpoint
   http.get("/api/events", ({ request }) => {
-    const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get("page") || "1", 10);
-    const size = parseInt(url.searchParams.get("size") || "50", 10);
+    // 解析查询参数，兼容 Node.js 环境
+    const urlString =
+      typeof request.url === "string" ? request.url : request.url.toString();
+    const searchParams = new URLSearchParams(urlString.split("?")[1] || "");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const size = parseInt(searchParams.get("size") || "50", 10);
 
     return HttpResponse.json({
       items: [
