@@ -17,8 +17,8 @@ export async function getOverview(params: {
 
 export async function getPVUVSeries(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   interval: "minute" | "hour" | "day";
 }) {
   const { data } = await api.get("/api/analytics/pv-uv/series", { params });
@@ -31,8 +31,8 @@ export async function getPVUVSeries(params: {
 
 export async function getPagesTop(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   limit?: number;
 }) {
   const { data } = await api.get("/api/analytics/pages/top", { params });
@@ -44,8 +44,8 @@ export async function getPagesTop(params: {
 
 export async function getEventsDistribution(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
 }) {
   const { data } = await api.get("/api/analytics/events-distribution", {
     params,
@@ -55,8 +55,8 @@ export async function getEventsDistribution(params: {
 
 export async function getWebVitals(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   metric?: string;
 }) {
   const { data } = await api.get("/api/analytics/web-vitals", { params });
@@ -66,8 +66,8 @@ export async function getWebVitals(params: {
 export async function getCustomEvents(params: {
   appId?: string;
   eventId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   groupBy?: "hour" | "day";
 }) {
   const { data } = await api.get("/api/analytics/custom-events", { params });
@@ -80,8 +80,8 @@ export async function getCustomEvents(params: {
 
 export async function getCustomEventsTop(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   limit?: number;
 }) {
   const { data } = await api.get("/api/analytics/custom-events/top", {
@@ -92,8 +92,8 @@ export async function getCustomEventsTop(params: {
 
 export async function getWebVitalsSeries(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   metric: string;
   interval?: "hour" | "day";
 }) {
@@ -109,8 +109,8 @@ export async function getWebVitalsSeries(params: {
 
 export async function getErrorsTrend(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   interval?: "hour" | "day";
 }) {
   const { data } = await api.get("/api/analytics/errors/trend", { params });
@@ -123,8 +123,8 @@ export async function getErrorsTrend(params: {
 
 export async function getErrorsTop(params: {
   appId?: string;
-  start: string;
-  end: string;
+  start?: string;
+  end?: string;
   limit?: number;
 }) {
   const { data } = await api.get("/api/analytics/errors/top", { params });

@@ -20,8 +20,8 @@ export default function OverviewUserPathMini({
     setLoading(true);
     getEvents({
       appId: appId || undefined,
-      start: start || "",
-      end: end || "",
+      start: start || undefined,
+      end: end || undefined,
       page: 1,
       size: 50,
     })

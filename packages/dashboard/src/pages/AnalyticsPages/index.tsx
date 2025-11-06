@@ -28,8 +28,8 @@ export default function AnalyticsPages() {
     let mounted = true;
     getPagesTop({
       appId: appId || undefined,
-      start: start || "",
-      end: end || "",
+      start: start || undefined,
+      end: end || undefined,
       limit: 100,
     }).then((res) => {
       if (!mounted) return;

@@ -16,8 +16,8 @@ export default function AnalyticsTrends() {
     let mounted = true;
     getPVUVSeries({
       appId: appId || undefined,
-      start: start || "",
-      end: end || "",
+      start: start || undefined,
+      end: end || undefined,
       interval: "hour",
     }).then((res) => {
       if (!mounted) return;

@@ -19,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,13 +47,17 @@ public class EventsController {
     @Operation(summary = "事件列表", description = "查询事件记录（用于用户行为路径等功能）")
     public ResponseEntity<EventsListResponse> getEvents(
             @RequestParam(required = false) String appId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(defaultValue = "UTC") String timezone) {
+        
+        // 解析日期参数，处理空字符串
+        LocalDateTime startTime = parseDateTime(start);
+        LocalDateTime endTime = parseDateTime(end);
         
         // 构建查询条件
         Specification<Event> spec = Specification.where(null);
@@ -60,9 +66,9 @@ public class EventsController {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
         }
         
-        if (start != null && end != null) {
+        if (startTime != null && endTime != null) {
             spec = spec.and((root, query, cb) -> 
-                cb.between(root.get("serverTimestamp"), start, end));
+                cb.between(root.get("serverTimestamp"), startTime, endTime));
         }
         
         if (type != null) {
@@ -116,6 +122,24 @@ public class EventsController {
         
         ProjectsResponse response = new ProjectsResponse(projectInfos);
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 解析日期时间字符串，处理空字符串和 null
+     * 
+     * @param dateTimeStr ISO 8601 格式的日期时间字符串
+     * @return LocalDateTime 对象，如果输入为空或解析失败则返回 null
+     */
+    private LocalDateTime parseDateTime(String dateTimeStr) {
+        if (dateTimeStr == null || dateTimeStr.isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+        } catch (DateTimeParseException e) {
+            // 解析失败时返回 null，而不是抛出异常
+            return null;
+        }
     }
     
     /**

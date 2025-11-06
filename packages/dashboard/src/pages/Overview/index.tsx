@@ -54,30 +54,30 @@ export default function Overview() {
     Promise.all([
       getOverview({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
       }),
       getPVUVSeries({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
         interval: "hour",
       }),
       getPagesTop({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
         limit: 10,
       }),
       getEventsDistribution({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
       }),
       getWebVitals({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
         metric: "LCP",
       }),
     ])

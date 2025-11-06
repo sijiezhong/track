@@ -32,14 +32,14 @@ export default function AnalyticsCustom() {
     Promise.all([
       getCustomEvents({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
         groupBy: "hour",
       }),
       getCustomEventsTop({
         appId: appId || undefined,
-        start: start || "",
-        end: end || "",
+        start: start || undefined,
+        end: end || undefined,
         limit: 100,
       }),
     ])

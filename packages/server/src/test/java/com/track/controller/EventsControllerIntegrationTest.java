@@ -112,6 +112,34 @@ class EventsControllerIntegrationTest {
     }
 
     @Test
+    void testGetEvents_WithEmptyStringDates() throws Exception {
+        // Given - 测试空字符串日期参数（前端可能传递空字符串）
+        List<Event> events = createTestEvents(2);
+        Page<Event> eventPage = new PageImpl<>(events, PageRequest.of(0, 50), 2L);
+
+        when(eventRepository.findAll(any(Specification.class), any(Pageable.class)))
+            .thenReturn(eventPage);
+
+        // When & Then - 传递空字符串应该被正确处理，不抛出异常
+        String response = mockMvc.perform(get("/api/events")
+                .param("appId", appId)
+                .param("start", "")  // 空字符串
+                .param("end", "")     // 空字符串
+                .param("page", "1")
+                .param("size", "50"))
+            .andExpect(status().isOk())  // 应该正常返回，而不是 500 错误
+            .andExpect(jsonPath("$.items").isArray())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        EventsListResponse result = objectMapper.readValue(response, EventsListResponse.class);
+        assertEquals(2, result.getItems().size());
+        // 验证空字符串参数被正确处理，不会导致日期范围筛选
+    }
+
+    @Test
     void testGetEvents_WithoutAppId() throws Exception {
         // Given - appId 可选，应该能正常工作
         List<Event> events = createTestEvents(2);

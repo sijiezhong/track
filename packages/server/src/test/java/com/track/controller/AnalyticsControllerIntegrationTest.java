@@ -92,6 +92,32 @@ class AnalyticsControllerIntegrationTest {
     }
 
     @Test
+    void testGetOverview_WithEmptyStringDates() throws Exception {
+        // Given - 测试空字符串日期参数
+        when(analyticsService.getPV(any(), any(), any(), any())).thenReturn(1000L);
+        when(analyticsService.getUV(any(), any(), any(), any())).thenReturn(500L);
+        when(analyticsService.getBounceRate(any(), any(), any())).thenReturn(0.35);
+        when(analyticsService.getAvgDuration(any(), any(), any())).thenReturn(120.5);
+
+        // When & Then - 传递空字符串应该使用默认时间范围
+        String response = mockMvc.perform(get("/api/analytics/overview")
+                .param("appId", appId)
+                .param("start", "")  // 空字符串
+                .param("end", "")    // 空字符串
+                .param("timezone", "UTC"))
+            .andExpect(status().isOk())  // 应该正常返回，使用默认时间范围
+            .andExpect(jsonPath("$.pv").value(1000))
+            .andExpect(jsonPath("$.uv").value(500))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        OverviewResponse result = objectMapper.readValue(response, OverviewResponse.class);
+        assertEquals(1000L, result.getPv());
+        assertEquals(500L, result.getUv());
+    }
+
+    @Test
     void testGetOverview_WithoutAppId() throws Exception {
         // Given - appId 是可选的，应该能正常工作
         when(analyticsService.getPV(isNull(), any(), any(), any())).thenReturn(2000L);

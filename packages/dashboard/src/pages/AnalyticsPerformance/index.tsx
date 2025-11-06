@@ -49,8 +49,8 @@ export default function AnalyticsPerformance() {
       METRICS.map((m) =>
         getWebVitals({
           appId: appId || undefined,
-          start: start || "",
-          end: end || "",
+          start: start || undefined,
+          end: end || undefined,
           metric: m.value,
         }),
       ),

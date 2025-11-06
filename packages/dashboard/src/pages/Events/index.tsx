@@ -36,8 +36,8 @@ export default function Events() {
     let mounted = true;
     getEvents({
       appId: appId || undefined,
-      start: start || "",
-      end: end || "",
+      start: start || undefined,
+      end: end || undefined,
       keyword,
       page,
       size,
