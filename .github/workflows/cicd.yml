@@ -312,7 +312,7 @@ jobs:
           rm -f dashboard-dist.tar.gz
           # 解压示例到 /opt/track/deploy/static/examples
           mkdir -p /opt/track/deploy/static/examples
-          tar -xzf examples-dist.tar.gz -C /opt/track/deploy/static --strip-components=1 || true
+          tar -xzf examples-dist.tar.gz -C /opt/track/deploy/static || true
           rm -f examples-dist.tar.gz
           # 使用 docker compose 启动（仅 HTTP，添加超时和保活）
           # 设置 DOCKER_BUILDKIT=1 可提高构建稳定性，COMPOSE_HTTP_TIMEOUT 延长超时时间
