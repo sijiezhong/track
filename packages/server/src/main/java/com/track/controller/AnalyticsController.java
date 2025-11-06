@@ -61,17 +61,13 @@ public class AnalyticsController {
     @Operation(summary = "PV/UV 趋势", description = "获取区间内按时间粒度聚合的 PV/UV 序列")
     public ResponseEntity<PvUvSeriesResponse> getPvUvSeries(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         ZoneId zoneId = ZoneId.of(timezone);
         List<PvUvSeriesResponse.TimeSeriesPoint> series = analyticsService.getPvUvSeries(appId, startTime, endTime,
@@ -85,17 +81,13 @@ public class AnalyticsController {
     @Operation(summary = "页面 TopN", description = "获取区间内页面指标 TopN")
     public ResponseEntity<PagesTopResponse> getPagesTop(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "UTC") String timezone) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         List<PagesTopResponse.PageStats> list = analyticsService.getPagesTop(appId, startTime, endTime, limit);
         long total = analyticsService.getPagesTopTotal(appId, startTime, endTime);
@@ -108,15 +100,11 @@ public class AnalyticsController {
     @Operation(summary = "事件类型分布", description = "区间内事件类型占比分布")
     public ResponseEntity<EventsDistributionResponse> getEventsDistribution(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         List<EventsDistributionResponse.TypeDistribution> list = analyticsService.getEventsDistribution(appId,
                 startTime, endTime);
@@ -129,17 +117,13 @@ public class AnalyticsController {
     @Operation(summary = "Web Vitals 分位", description = "区间内 Web Vitals 指标的分位统计")
     public ResponseEntity<WebVitalsResponse> getWebVitals(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "LCP") String metric,
             @RequestParam(defaultValue = "UTC") String timezone) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         WebVitalsResponse response = analyticsService.getWebVitals(appId, startTime, endTime, metric);
         return ResponseEntity.ok(response);
@@ -149,18 +133,14 @@ public class AnalyticsController {
     @Operation(summary = "Web Vitals 趋势", description = "区间内 Web Vitals 指标趋势")
     public ResponseEntity<WebVitalsSeriesResponse> getWebVitalsSeries(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam String metric,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         ZoneId zoneId = ZoneId.of(timezone);
         List<WebVitalsSeriesResponse.WebVitalsPoint> series = analyticsService.getWebVitalsSeries(appId, startTime,
@@ -175,17 +155,13 @@ public class AnalyticsController {
     public ResponseEntity<CustomEventsSeriesResponse> getCustomEvents(
             @RequestParam(required = false) String appId,
             @RequestParam(required = false) String eventId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "day") String groupBy,
             @RequestParam(defaultValue = "UTC") String timezone) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         ZoneId zoneId = ZoneId.of(timezone);
         List<CustomEventsSeriesResponse.CustomEventPoint> series = analyticsService.getCustomEventsSeries(appId,
@@ -200,16 +176,12 @@ public class AnalyticsController {
     @Operation(summary = "自定义事件 TopN", description = "区间内自定义事件 TopN")
     public ResponseEntity<CustomEventsTopResponse> getCustomEventsTop(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "10") int limit) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         List<CustomEventsTopResponse.CustomEventStats> list = analyticsService.getCustomEventsTop(appId, startTime,
                 endTime, limit);
@@ -223,17 +195,13 @@ public class AnalyticsController {
     @Operation(summary = "错误趋势", description = "区间内错误数量趋势")
     public ResponseEntity<ErrorsTrendResponse> getErrorsTrend(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         ZoneId zoneId = ZoneId.of(timezone);
         List<ErrorsTrendResponse.ErrorPoint> series = analyticsService.getErrorsTrend(appId, startTime, endTime,
@@ -247,16 +215,12 @@ public class AnalyticsController {
     @Operation(summary = "错误 TopN", description = "区间内错误 TopN")
     public ResponseEntity<ErrorsTopResponse> getErrorsTop(
             @RequestParam(required = false) String appId,
-            @RequestParam String start,
-            @RequestParam String end,
+            @RequestParam(required = false) String start,
+            @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "10") int limit) {
 
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
-
-        if (startTime == null || endTime == null) {
-            return ResponseEntity.badRequest().build();
-        }
 
         List<ErrorsTopResponse.ErrorStats> list = analyticsService.getErrorsTop(appId, startTime, endTime, limit);
 

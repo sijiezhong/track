@@ -45,9 +45,14 @@ public class AnalyticsService {
         
         spec = spec.and((root, query, cb) -> 
             cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode())
-        ).and((root, query, cb) -> 
-            cb.between(root.get("serverTimestamp"), startTime, endTime)
         );
+        
+        // 只有当提供了时间范围时才添加时间条件
+        if (startTime != null && endTime != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.between(root.get("serverTimestamp"), startTime, endTime)
+            );
+        }
         
         if (pageUrl != null && !pageUrl.isEmpty()) {
             spec = spec.and((root, query, cb) -> 
@@ -73,7 +78,11 @@ public class AnalyticsService {
         }
         
         predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
-        predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
+        
+        // 只有当提供了时间范围时才添加时间条件
+        if (startTime != null && endTime != null) {
+            predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
+        }
         
         if (pageUrl != null && !pageUrl.isEmpty()) {
             predicates.add(cb.equal(root.get("pageUrl"), pageUrl));
@@ -98,18 +107,25 @@ public class AnalyticsService {
         }
         
         // 使用原生 SQL 查询只访问了一个页面的用户数
+        String timeCondition = (startTime != null && endTime != null) 
+            ? "AND e1.server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        String subTimeCondition = (startTime != null && endTime != null)
+            ? "AND e2.server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT COUNT(DISTINCT e1.user_id)
             FROM events e1
             WHERE (:appId IS NULL OR e1.app_id = :appId)
               AND e1.event_type_id = :eventTypeId
-              AND e1.server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
               AND (
                 SELECT COUNT(DISTINCT e2.page_url)
                 FROM events e2
                 WHERE (:appId IS NULL OR e2.app_id = :appId)
                   AND e2.event_type_id = :eventTypeId
-                  AND e2.server_timestamp BETWEEN :startTime AND :endTime
+                  """ + subTimeCondition + """
                   AND e2.user_id = e1.user_id
               ) = 1
             """;
@@ -117,8 +133,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         
         Object result = query.getSingleResult();
         Long bounceUV = result != null ? ((Number) result).longValue() : 0L;
@@ -139,10 +157,15 @@ public class AnalyticsService {
         spec = spec.and((root, query, cb) -> 
             cb.equal(root.get("eventTypeId"), EventType.PAGE_STAY.getCode())
         ).and((root, query, cb) -> 
-            cb.between(root.get("serverTimestamp"), startTime, endTime)
-        ).and((root, query, cb) -> 
             cb.isNotNull(root.get("properties"))
         );
+        
+        // 只有当提供了时间范围时才添加时间条件
+        if (startTime != null && endTime != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.between(root.get("serverTimestamp"), startTime, endTime)
+            );
+        }
         
         List<Event> events = eventRepository.findAll(spec);
         
@@ -188,6 +211,10 @@ public class AnalyticsService {
                 dateFormat = "YYYY-MM-DD HH24:00";
         }
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
@@ -196,7 +223,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
             GROUP BY ts
             ORDER BY ts
             """;
@@ -204,8 +231,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
         
@@ -227,6 +256,10 @@ public class AnalyticsService {
     public List<PagesTopResponse.PageStats> getPagesTop(
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 page_url,
@@ -242,7 +275,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
               AND page_url IS NOT NULL
             GROUP BY page_url
             ORDER BY pv DESC
@@ -252,8 +285,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("limit", limit);
         
         @SuppressWarnings("unchecked")
@@ -275,6 +310,10 @@ public class AnalyticsService {
     public List<EventsDistributionResponse.TypeDistribution> getEventsDistribution(
             String appId, LocalDateTime startTime, LocalDateTime endTime) {
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND e.server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 CASE 
@@ -285,15 +324,17 @@ public class AnalyticsService {
             FROM events e
             LEFT JOIN event_types et ON e.event_type_id = et.id
             WHERE (:appId IS NULL OR e.app_id = :appId)
-              AND e.server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
             GROUP BY type
             ORDER BY value DESC
             """;
         
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
@@ -312,6 +353,10 @@ public class AnalyticsService {
     public WebVitalsResponse getWebVitals(
             String appId, LocalDateTime startTime, LocalDateTime endTime, String metric) {
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p50,
@@ -320,15 +365,17 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
               AND properties->>:metric IS NOT NULL
             """;
         
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("metric", metric.toLowerCase());
         
         Object[] result = (Object[]) query.getSingleResult();
@@ -360,6 +407,10 @@ public class AnalyticsService {
                 dateFormat = "YYYY-MM-DD HH24:00";
         }
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
@@ -369,7 +420,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
               AND properties->>:metric IS NOT NULL
             GROUP BY ts
             ORDER BY ts
@@ -378,8 +429,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("metric", metric.toLowerCase());
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
@@ -406,6 +459,10 @@ public class AnalyticsService {
         
         String dateFormat = "hour".equals(groupBy.toLowerCase()) ? "YYYY-MM-DD HH24:00" : "YYYY-MM-DD";
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
@@ -413,7 +470,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
             """ + (eventId != null && !eventId.isEmpty() ? "AND custom_event_id = :eventId" : "") + """
             GROUP BY ts
             ORDER BY ts
@@ -422,8 +479,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
         if (eventId != null && !eventId.isEmpty()) {
@@ -454,9 +513,14 @@ public class AnalyticsService {
         
         spec = spec.and((root, query, cb) -> 
             cb.equal(root.get("eventTypeId"), EventType.CUSTOM.getCode())
-        ).and((root, query, cb) -> 
-            cb.between(root.get("serverTimestamp"), startTime, endTime)
         );
+        
+        // 只有当提供了时间范围时才添加时间条件
+        if (startTime != null && endTime != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.between(root.get("serverTimestamp"), startTime, endTime)
+            );
+        }
         
         if (eventId != null && !eventId.isEmpty()) {
             spec = spec.and((root, query, cb) -> 
@@ -473,6 +537,10 @@ public class AnalyticsService {
     public List<CustomEventsTopResponse.CustomEventStats> getCustomEventsTop(
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 custom_event_id as event_id,
@@ -480,7 +548,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
               AND custom_event_id IS NOT NULL
             GROUP BY custom_event_id
             ORDER BY count DESC
@@ -490,8 +558,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("limit", limit);
         
         @SuppressWarnings("unchecked")
@@ -524,6 +594,10 @@ public class AnalyticsService {
                 dateFormat = "YYYY-MM-DD HH24:00";
         }
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
@@ -531,7 +605,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
             GROUP BY ts
             ORDER BY ts
             """;
@@ -539,8 +613,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
         
@@ -562,6 +638,10 @@ public class AnalyticsService {
     public List<ErrorsTopResponse.ErrorStats> getErrorsTop(
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
         
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT 
                 COALESCE(
@@ -575,7 +655,7 @@ public class AnalyticsService {
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
             GROUP BY fingerprint, message
             ORDER BY count DESC
             LIMIT :limit
@@ -584,8 +664,10 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         query.setParameter("limit", limit);
         
         @SuppressWarnings("unchecked")
@@ -608,20 +690,26 @@ public class AnalyticsService {
      * 获取页面 TopN 总数
      */
     public long getPagesTopTotal(String appId, LocalDateTime startTime, LocalDateTime endTime) {
+        String timeCondition = (startTime != null && endTime != null)
+            ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+            : "";
+        
         String sql = """
             SELECT COUNT(DISTINCT page_url)
             FROM events
             WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
-              AND server_timestamp BETWEEN :startTime AND :endTime
+              """ + timeCondition + """
               AND page_url IS NOT NULL
             """;
         
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
-        query.setParameter("startTime", startTime);
-        query.setParameter("endTime", endTime);
+        if (startTime != null && endTime != null) {
+            query.setParameter("startTime", startTime);
+            query.setParameter("endTime", endTime);
+        }
         
         Object result = query.getSingleResult();
         return result != null ? ((Number) result).longValue() : 0L;
