@@ -210,15 +210,17 @@ public class AnalyticsService {
                     COUNT(*) as pv,
                     COUNT(DISTINCT user_id) as uv
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -261,9 +263,9 @@ public class AnalyticsService {
                         END
                     ), 0) as avg_duration
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                   AND page_url IS NOT NULL
                 GROUP BY page_url
                 ORDER BY pv DESC
@@ -271,7 +273,9 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -310,14 +314,17 @@ public class AnalyticsService {
                     COUNT(*) as value
                 FROM events e
                 LEFT JOIN event_types et ON e.event_type_id = et.id
-                WHERE (:appId IS NULL OR e.app_id = :appId)
-                  """ + timeCondition + """
+                WHERE 1=1
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND e.app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                 GROUP BY type
                 ORDER BY value DESC
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
             query.setParameter("endTime", endTime);
@@ -349,15 +356,17 @@ public class AnalyticsService {
                     PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p75,
                     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p95
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -404,9 +413,9 @@ public class AnalyticsService {
                     PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p75,
                     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p95
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
                 GROUP BY ts
@@ -414,7 +423,9 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -525,9 +536,9 @@ public class AnalyticsService {
                     custom_event_id as event_id,
                     COUNT(*) as count
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                   AND custom_event_id IS NOT NULL
                 GROUP BY custom_event_id
                 ORDER BY count DESC
@@ -535,7 +546,9 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -581,15 +594,17 @@ public class AnalyticsService {
                     TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
                     COUNT(*) as count
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -673,14 +688,16 @@ public class AnalyticsService {
         String sql = """
                 SELECT COUNT(DISTINCT page_url)
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
-                  """ + timeCondition + """
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + timeCondition + """
                   AND page_url IS NOT NULL
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
