@@ -68,6 +68,9 @@ jobs:
         run: pnpm store prune || true
       - name: 安装依赖并测试 dashboard（pnpm）
         working-directory: packages/dashboard
+        env:
+          # 抑制 Node.js 警告，减少 webidl-conversions 等依赖的噪音
+          NODE_OPTIONS: --no-warnings
         run: |
           pnpm install --frozen-lockfile=false
           # 检查测试脚本是否存在，不存在则报错中断
@@ -75,7 +78,7 @@ jobs:
             echo "❌ 错误：package.json 中未找到 test 脚本，CI 中断"
             exit 1
           fi
-          # 执行测试，失败时中断 CI
+          # 执行测试（setup.ts 中已处理 unhandled errors）
           pnpm test
 
   test_server:
