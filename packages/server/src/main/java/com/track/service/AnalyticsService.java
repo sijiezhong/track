@@ -37,9 +37,13 @@ public class AnalyticsService {
      * 统计 PV（页面浏览量）
      */
     public long getPV(String appId, LocalDateTime startTime, LocalDateTime endTime, String pageUrl) {
-        Specification<Event> spec = Specification.<Event>where(
-            (root, query, cb) -> cb.equal(root.get("appId"), appId)
-        ).and((root, query, cb) -> 
+        Specification<Event> spec = Specification.where(null);
+        
+        if (appId != null && !appId.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+        }
+        
+        spec = spec.and((root, query, cb) -> 
             cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode())
         ).and((root, query, cb) -> 
             cb.between(root.get("serverTimestamp"), startTime, endTime)
@@ -63,7 +67,11 @@ public class AnalyticsService {
         Root<Event> root = query.from(Event.class);
         
         List<Predicate> predicates = new ArrayList<>();
-        predicates.add(cb.equal(root.get("appId"), appId));
+        
+        if (appId != null && !appId.isEmpty()) {
+            predicates.add(cb.equal(root.get("appId"), appId));
+        }
+        
         predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
         predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
         
@@ -93,13 +101,13 @@ public class AnalyticsService {
         String sql = """
             SELECT COUNT(DISTINCT e1.user_id)
             FROM events e1
-            WHERE e1.app_id = :appId
+            WHERE (:appId IS NULL OR e1.app_id = :appId)
               AND e1.event_type_id = :eventTypeId
               AND e1.server_timestamp BETWEEN :startTime AND :endTime
               AND (
                 SELECT COUNT(DISTINCT e2.page_url)
                 FROM events e2
-                WHERE e2.app_id = :appId
+                WHERE (:appId IS NULL OR e2.app_id = :appId)
                   AND e2.event_type_id = :eventTypeId
                   AND e2.server_timestamp BETWEEN :startTime AND :endTime
                   AND e2.user_id = e1.user_id
@@ -122,9 +130,13 @@ public class AnalyticsService {
      * 计算平均停留时长（秒）
      */
     public double getAvgDuration(String appId, LocalDateTime startTime, LocalDateTime endTime) {
-        Specification<Event> spec = Specification.<Event>where(
-            (root, query, cb) -> cb.equal(root.get("appId"), appId)
-        ).and((root, query, cb) -> 
+        Specification<Event> spec = Specification.where(null);
+        
+        if (appId != null && !appId.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+        }
+        
+        spec = spec.and((root, query, cb) -> 
             cb.equal(root.get("eventTypeId"), EventType.PAGE_STAY.getCode())
         ).and((root, query, cb) -> 
             cb.between(root.get("serverTimestamp"), startTime, endTime)
@@ -182,7 +194,7 @@ public class AnalyticsService {
                 COUNT(*) as pv,
                 COUNT(DISTINCT user_id) as uv
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
             GROUP BY ts
@@ -228,7 +240,7 @@ public class AnalyticsService {
                     END
                 ), 0) as avg_duration
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
               AND page_url IS NOT NULL
@@ -272,7 +284,7 @@ public class AnalyticsService {
                 COUNT(*) as value
             FROM events e
             LEFT JOIN event_types et ON e.event_type_id = et.id
-            WHERE e.app_id = :appId
+            WHERE (:appId IS NULL OR e.app_id = :appId)
               AND e.server_timestamp BETWEEN :startTime AND :endTime
             GROUP BY type
             ORDER BY value DESC
@@ -306,7 +318,7 @@ public class AnalyticsService {
                 PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p75,
                 PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p95
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
               AND properties->>:metric IS NOT NULL
@@ -355,7 +367,7 @@ public class AnalyticsService {
                 PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p75,
                 PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p95
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
               AND properties->>:metric IS NOT NULL
@@ -399,7 +411,7 @@ public class AnalyticsService {
                 TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
                 COUNT(*) as count
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
             """ + (eventId != null && !eventId.isEmpty() ? "AND custom_event_id = :eventId" : "") + """
@@ -434,9 +446,13 @@ public class AnalyticsService {
      */
     public long getCustomEventsTotal(String appId, String eventId, 
                                      LocalDateTime startTime, LocalDateTime endTime) {
-        Specification<Event> spec = Specification.<Event>where(
-            (root, query, cb) -> cb.equal(root.get("appId"), appId)
-        ).and((root, query, cb) -> 
+        Specification<Event> spec = Specification.where(null);
+        
+        if (appId != null && !appId.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+        }
+        
+        spec = spec.and((root, query, cb) -> 
             cb.equal(root.get("eventTypeId"), EventType.CUSTOM.getCode())
         ).and((root, query, cb) -> 
             cb.between(root.get("serverTimestamp"), startTime, endTime)
@@ -462,7 +478,7 @@ public class AnalyticsService {
                 custom_event_id as event_id,
                 COUNT(*) as count
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
               AND custom_event_id IS NOT NULL
@@ -513,7 +529,7 @@ public class AnalyticsService {
                 TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
                 COUNT(*) as count
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
             GROUP BY ts
@@ -557,7 +573,7 @@ public class AnalyticsService {
                 MIN(server_timestamp) as first_seen,
                 MAX(server_timestamp) as last_seen
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
             GROUP BY fingerprint, message
@@ -595,7 +611,7 @@ public class AnalyticsService {
         String sql = """
             SELECT COUNT(DISTINCT page_url)
             FROM events
-            WHERE app_id = :appId
+            WHERE (:appId IS NULL OR app_id = :appId)
               AND event_type_id = :eventTypeId
               AND server_timestamp BETWEEN :startTime AND :endTime
               AND page_url IS NOT NULL
