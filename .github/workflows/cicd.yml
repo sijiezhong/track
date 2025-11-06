@@ -64,15 +64,19 @@ jobs:
         with:
           node-version: '18'
           cache: 'pnpm'
+      - name: 清理 pnpm 缓存
+        run: pnpm store prune || true
       - name: 安装依赖并测试 dashboard（pnpm）
         working-directory: packages/dashboard
         run: |
           pnpm install --frozen-lockfile=false
-          if [ -f package.json ] && jq -e '.scripts.test' package.json >/dev/null 2>&1; then
-            pnpm test --if-present || pnpm -s -w echo "无测试脚本，跳过"
-          else
-            echo "无测试脚本，跳过"
+          # 检查测试脚本是否存在，不存在则报错中断
+          if ! jq -e '.scripts.test' package.json >/dev/null 2>&1; then
+            echo "❌ 错误：package.json 中未找到 test 脚本，CI 中断"
+            exit 1
           fi
+          # 执行测试，失败时中断 CI
+          pnpm test
 
   test_server:
     name: 后端测试（server）
@@ -106,6 +110,8 @@ jobs:
         with:
           node-version: '18'
           cache: 'pnpm'
+      - name: 清理 pnpm 缓存
+        run: pnpm store prune || true
       - name: 构建 dashboard（pnpm）
         working-directory: packages/dashboard
         run: |
