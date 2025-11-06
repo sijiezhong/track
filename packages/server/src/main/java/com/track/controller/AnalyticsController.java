@@ -62,10 +62,6 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
         ZoneId zoneId = ZoneId.of(timezone);
         List<PvUvSeriesResponse.TimeSeriesPoint> series = 
             analyticsService.getPvUvSeries(appId, start, end, interval, zoneId);
@@ -83,10 +79,6 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
         List<PagesTopResponse.PageStats> list = 
             analyticsService.getPagesTop(appId, start, end, limit);
         long total = analyticsService.getPagesTopTotal(appId, start, end);
@@ -101,10 +93,6 @@ public class AnalyticsController {
             @RequestParam(required = false) String appId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
         
         List<EventsDistributionResponse.TypeDistribution> list = 
             analyticsService.getEventsDistribution(appId, start, end);
@@ -122,10 +110,6 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "LCP") String metric,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
         WebVitalsResponse response = analyticsService.getWebVitals(appId, start, end, metric);
         return ResponseEntity.ok(response);
     }
@@ -139,10 +123,6 @@ public class AnalyticsController {
             @RequestParam String metric,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
-        
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
         
         ZoneId zoneId = ZoneId.of(timezone);
         List<WebVitalsSeriesResponse.WebVitalsPoint> series = 
@@ -162,10 +142,6 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "day") String groupBy,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
         ZoneId zoneId = ZoneId.of(timezone);
         List<CustomEventsSeriesResponse.CustomEventPoint> series = 
             analyticsService.getCustomEventsSeries(appId, eventId, start, end, groupBy, zoneId);
@@ -182,10 +158,6 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
             @RequestParam(defaultValue = "10") int limit) {
-        
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
         
         List<CustomEventsTopResponse.CustomEventStats> list = 
             analyticsService.getCustomEventsTop(appId, start, end, limit);
@@ -204,10 +176,6 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        
         ZoneId zoneId = ZoneId.of(timezone);
         List<ErrorsTrendResponse.ErrorPoint> series = 
             analyticsService.getErrorsTrend(appId, start, end, interval, zoneId);
@@ -223,10 +191,6 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
             @RequestParam(defaultValue = "10") int limit) {
-        
-        if (appId == null || appId.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
         
         List<ErrorsTopResponse.ErrorStats> list = 
             analyticsService.getErrorsTop(appId, start, end, limit);
