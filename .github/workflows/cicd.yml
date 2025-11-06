@@ -1,5 +1,9 @@
 name: Track CICD
 
+env:
+  NODE_VERSION: '20.19.0'
+  PNPM_VERSION: '9'
+
 on:
   push:
     branches:
@@ -17,12 +21,12 @@ jobs:
       - name: 设置 Node 与 pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: ${{ env.PNPM_VERSION }}
 
       - name: 设置 Node LTS
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           # 注意：prepare 阶段不执行 pnpm install，避免产生空缓存目录
 
       # Java 缓存与安装移动到 test_server 阶段，避免空路径缓存错误
@@ -59,10 +63,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - name: 清理 pnpm 缓存
         run: pnpm store prune || true
@@ -108,10 +112,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - name: 清理 pnpm 缓存
         run: pnpm store prune || true
@@ -139,10 +143,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - name: 清理 pnpm 缓存
         run: pnpm store prune || true
@@ -183,10 +187,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - name: 清理 pnpm 缓存
         run: pnpm store prune || true
