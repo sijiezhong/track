@@ -37,7 +37,7 @@ jobs:
 
       - name: 服务器安装 Docker/Compose（幂等，准备阶段执行）
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           if ! command -v docker >/dev/null 2>&1; then
             sudo apt-get update -y
@@ -151,10 +151,18 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
           ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          # 配置 SSH 保活参数，防止长时间构建时连接断开
+          cat >> ~/.ssh/config << 'SSHCONFIG'
+          Host *
+            ServerAliveInterval 60
+            ServerAliveCountMax 10
+            TCPKeepAlive yes
+          SSHCONFIG
+          chmod 600 ~/.ssh/config
 
       - name: 初始化部署目录（按需创建）
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           sudo mkdir -p /opt/track/{deploy,static,logs,packages}
           sudo mkdir -p /opt/track/deploy/nginx/conf.d
@@ -163,17 +171,17 @@ jobs:
 
       - name: 上传部署文件与前端产物
         run: |
-          rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
+          rsync -az -e "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
             deploy/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/deploy/
           # 同步后端源码，供 docker compose 在 /opt/track/deploy 相对路径 ../packages/server 构建
-          rsync -az -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
+          rsync -az -e "ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p ${{ secrets.SERVER_PORT }} -i ~/.ssh/id_rsa" \
             packages/server/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/packages/server/
-          scp -o StrictHostKeyChecking=no -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
+          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
             artifacts/dashboard-dist.tar.gz "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/
 
       - name: 构建与启动（首次 HTTP 服务）
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           cd /opt/track
           # 解压前端静态资源至 deploy/static
@@ -181,8 +189,9 @@ jobs:
           tar -xzf dashboard-dist.tar.gz -C /opt/track/deploy/static --strip-components=1 || true
           # 清理临时压缩包
           rm -f dashboard-dist.tar.gz
-          # 使用 docker compose 启动（仅 HTTP）
-          docker compose -f /opt/track/deploy/docker-compose.yml up -d --build
+          # 使用 docker compose 启动（仅 HTTP，添加超时和保活）
+          # 设置 DOCKER_BUILDKIT=1 可提高构建稳定性，COMPOSE_HTTP_TIMEOUT 延长超时时间
+          DOCKER_BUILDKIT=1 COMPOSE_HTTP_TIMEOUT=600 docker compose -f /opt/track/deploy/docker-compose.yml up -d --build
           # 清理未使用的 Docker 镜像和构建缓存（保留正在使用的）
           docker system prune -f --volumes=false || true
           EOF
@@ -191,7 +200,7 @@ jobs:
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
           set -e
           sudo apt-get update -y
           sudo apt-get install -y certbot
@@ -202,7 +211,7 @@ jobs:
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << EOF
           set -e
           if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
             sudo sed "s/__DOMAIN__/$DOMAIN/g" /opt/track/deploy/nginx/conf.d/app-ssl.conf.template | sudo tee /opt/track/deploy/nginx/conf.d/app-ssl.conf >/dev/null
@@ -238,7 +247,7 @@ jobs:
           curl -sS http://$DOMAIN/api/health || true
       - name: 输出容器状态
         run: |
-          ssh -o StrictHostKeyChecking=no -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -p "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}" << 'EOF'
           set -e
           docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
           echo '--- nginx logs (last 100 lines) ---'
