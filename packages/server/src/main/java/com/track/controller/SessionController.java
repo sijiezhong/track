@@ -38,7 +38,7 @@ public class SessionController {
     
     @PostMapping
     @Operation(summary = "注册用户会话", description = "创建新的 session 并设置 Cookie")
-    public ResponseEntity<SessionResponse> createSession(
+    public ResponseEntity<?> createSession(
             @RequestBody SessionRequest request,
             HttpServletResponse response) {
         
