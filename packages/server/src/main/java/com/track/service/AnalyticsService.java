@@ -647,8 +647,8 @@ public class AnalyticsService {
                     MIN(server_timestamp) as first_seen,
                     MAX(server_timestamp) as last_seen
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
                   """ + timeCondition + """
                 GROUP BY fingerprint, message
                 ORDER BY count DESC
@@ -656,7 +656,9 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
