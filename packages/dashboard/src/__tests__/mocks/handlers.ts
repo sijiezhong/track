@@ -1,5 +1,23 @@
 import { http, HttpResponse } from "msw";
 
+// 手动解析查询参数的辅助函数，避免 Node.js 环境中的 URL 相关问题
+function parseQueryParams(url: string | URL): Record<string, string> {
+  const urlString = typeof url === "string" ? url : url.toString();
+  const queryString = urlString.split("?")[1] || "";
+  const params: Record<string, string> = {};
+
+  if (!queryString) return params;
+
+  queryString.split("&").forEach((pair) => {
+    const [key, value = ""] = pair.split("=");
+    if (key) {
+      params[decodeURIComponent(key)] = decodeURIComponent(value);
+    }
+  });
+
+  return params;
+}
+
 // 使用相对路径匹配所有请求
 export const handlers = [
   // Analytics endpoints
@@ -14,11 +32,9 @@ export const handlers = [
   }),
 
   http.get("/api/analytics/pv-uv/series", ({ request }) => {
-    // 解析查询参数，兼容 Node.js 环境
-    const urlString =
-      typeof request.url === "string" ? request.url : request.url.toString();
-    const searchParams = new URLSearchParams(urlString.split("?")[1] || "");
-    const interval = searchParams.get("interval") || "hour";
+    // 手动解析查询参数，避免 Node.js 环境中的 URL 相关问题
+    const params = parseQueryParams(request.url);
+    const interval = params.interval || "hour";
 
     return HttpResponse.json({
       series: [
@@ -71,11 +87,9 @@ export const handlers = [
   }),
 
   http.get("/api/analytics/custom-events", ({ request }) => {
-    // 解析查询参数，兼容 Node.js 环境
-    const urlString =
-      typeof request.url === "string" ? request.url : request.url.toString();
-    const searchParams = new URLSearchParams(urlString.split("?")[1] || "");
-    const groupBy = searchParams.get("groupBy") || "day";
+    // 手动解析查询参数，避免 Node.js 环境中的 URL 相关问题
+    const params = parseQueryParams(request.url);
+    const groupBy = params.groupBy || "day";
 
     return HttpResponse.json({
       series: [
@@ -132,12 +146,10 @@ export const handlers = [
 
   // Events endpoint
   http.get("/api/events", ({ request }) => {
-    // 解析查询参数，兼容 Node.js 环境
-    const urlString =
-      typeof request.url === "string" ? request.url : request.url.toString();
-    const searchParams = new URLSearchParams(urlString.split("?")[1] || "");
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const size = parseInt(searchParams.get("size") || "50", 10);
+    // 手动解析查询参数，避免 Node.js 环境中的 URL 相关问题
+    const params = parseQueryParams(request.url);
+    const page = parseInt(params.page || "1", 10);
+    const size = parseInt(params.size || "50", 10);
 
     return HttpResponse.json({
       items: [
