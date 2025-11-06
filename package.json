@@ -14,12 +14,12 @@
   },
   "lint-staged": {
     "packages/client-sdk/**/*.{js,ts,tsx,vue,css,md,json}": [
-      "oxfmt",
-      "oxlint --fix"
+      "oxfmt packages/client-sdk",
+      "oxlint --fix {files}"
     ],
     "packages/dashboard/**/*.{js,ts,tsx,vue,css,md,json}": [
-      "oxfmt",
-      "oxlint --fix"
+      "oxfmt packages/dashboard",
+      "oxlint --fix {files}"
     ]
   }
 }
