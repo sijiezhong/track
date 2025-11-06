@@ -18,6 +18,7 @@ import track from '@track/sdk';
 // 初始化 SDK（异步）
 await track.init({
   appId: 'your-app-id',
+  appName: 'your-project-name', // 可选，不传则服务端使用 appId 作为项目名
   userId: 'user-123',
   userProps: { plan: 'premium' }
 }, {
@@ -85,6 +86,7 @@ export default {
 **参数：**
 - `userConfig`: 用户配置
   - `appId`: 应用 ID（必填）
+  - `appName`: 项目名（可选；不传则服务端使用 `appId` 作为项目名）
   - `userId`: 用户 ID（必填）
   - `userProps`: 用户属性（可选）
 - `trackConfig`: 追踪配置（可选）

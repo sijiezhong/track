@@ -205,7 +205,7 @@
         <label for="endpoint" style="font-weight: bold; color: #856404;">
           🌐 服务端地址 (Endpoint) <span style="color: #dc3545;">*必填</span>:
         </label>
-        <input type="text" id="endpoint" value="http://localhost:8080" placeholder="http://localhost:8080"
+        <input type="text" id="endpoint" value="" placeholder="http://localhost:8080"
           style="border: 2px solid #ffc107; font-weight: 500;">
         <small style="color: #856404; display: block; margin-top: 5px;">
           示例：<code>http://localhost:8080</code>（本地开发）或 <code>https://track.yourdomain.com</code>（生产环境）
@@ -213,7 +213,11 @@
       </div>
       <div class="input-group">
         <label for="appId">应用 ID (App ID):</label>
-        <input type="text" id="appId" value="example-app-id" placeholder="example-app-id">
+        <input type="text" id="appId" value="vanilla-example-app-id" placeholder="vanilla-example-app-id">
+      </div>
+      <div class="input-group">
+        <label for="appName">项目名 (App Name，可选):</label>
+        <input type="text" id="appName" value="Vanilla Example" placeholder="不填则使用 App ID">
       </div>
       <div class="input-group">
         <label for="userId">用户 ID (User ID):</label>
@@ -381,6 +385,7 @@
 
         await window.TrackSDK.init({
           appId: appId,
+          appName: document.getElementById('appName').value.trim() || undefined,
           userId: userId,
           userProps: {
             plan: 'premium',
@@ -532,7 +537,8 @@
     // 一键填充本地配置
     document.getElementById('quick-fill-btn').addEventListener('click', () => {
       document.getElementById('endpoint').value = 'http://localhost:8080';
-      document.getElementById('appId').value = 'example-app-id';
+      document.getElementById('appId').value = 'vanilla-example-app-id';
+      document.getElementById('appName').value = 'Vanilla Example';
       document.getElementById('userId').value = 'user-dev-' + Math.floor(Math.random() * 10000);
       log('已填充本地开发配置', 'success');
     });
@@ -582,6 +588,10 @@
     // 页面加载完成
     log('页面加载完成，等待初始化 SDK...', 'info');
     log('提示：请先配置 SDK 参数，然后点击"初始化 SDK"', 'info');
+    // 默认使用当前域名作为 endpoint
+    try {
+      document.getElementById('endpoint').value = window.location.origin;
+    } catch (e) {}
   </script>
 </body>
 

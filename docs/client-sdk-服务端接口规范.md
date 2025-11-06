@@ -30,6 +30,7 @@
 - 请求头：`Content-Type: application/json`
 - 请求体 JSON：
   - `appId: string` 应用 ID
+  - `appName?: string` 项目名（可选；未提供时服务端使用 `appId` 作为项目名）
   - `userId: string` 用户 ID（可为匿名/临时 ID）
   - `userProps?: object` 用户属性（可选，任意键值对）
   - `ttlMinutes?: number | null` 会话有效期（分钟）。`0` 在 SDK 中会被转换为 `null`（表示不过期），未提供时默认 1440（24h）。
@@ -41,12 +42,15 @@
   - `4xx`：参数错误、鉴权失败等
   - `5xx`：服务端异常
 
+> 说明：若 `appId` 不存在，服务端会自动创建项目（`is_active=true`），`appName` 为空时将使用 `appId` 作为项目名；若项目存在但未激活，将返回 `400` 并附带 `{ code: "INACTIVE_PROJECT", message: "..." }`。
+
 示例（cURL）：
 ```bash
 curl -i -X POST "https://your-endpoint.com/api/session" \
   -H "Content-Type: application/json" \
   -d '{
     "appId": "example-app",
+    "appName": "Example Project",
     "userId": "user-123",
     "userProps": { "plan": "premium" },
     "ttlMinutes": 1440

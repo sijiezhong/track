@@ -4,9 +4,10 @@ import track from "@track/sdk";
 
 export default function Home() {
   const [endpoint, setEndpoint] = useState<string>(
-    process.env.NEXT_PUBLIC_TRACK_ENDPOINT || "http://localhost:8080",
+    typeof window !== "undefined" ? window.location.origin : "",
   );
-  const [appId, setAppId] = useState("example-app-id");
+  const [appId, setAppId] = useState("nextjs-example-app-id");
+  const [appName, setAppName] = useState("Next.js Example");
   const [userId, setUserId] = useState("user-123");
   const [sessionTTL, setSessionTTL] = useState<number>(1440);
 
@@ -54,6 +55,7 @@ export default function Home() {
       await track.init(
         {
           appId,
+          appName,
           userId,
           userProps: {
             plan: "premium",
@@ -114,7 +116,8 @@ export default function Home() {
 
   const onQuickFillLocal = useCallback(() => {
     setEndpoint("http://localhost:8080");
-    setAppId("example-app-id");
+    setAppId("nextjs-example-app-id");
+    setAppName("Next.js Example");
     setUserId("user-dev-" + Math.floor(Math.random() * 10000));
     log("已填充本地开发配置", "success");
   }, [log]);
@@ -267,6 +270,23 @@ export default function Home() {
               }}
             />
           </div>
+          <div style={styles.inputGroup}>
+            <label>项目名 (App Name，可选)</label>
+            <input
+              value={appName}
+              onChange={(e) => setAppName(e.target.value)}
+              placeholder="不填则使用 App ID"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                border: "1px solid #ddd",
+                borderRadius: 4,
+                fontSize: 14,
+              }}
+            />
+          </div>
+        </div>
+        <div style={styles.grid2 as React.CSSProperties}>
           <div style={styles.inputGroup}>
             <label>用户 ID (User ID)</label>
             <input

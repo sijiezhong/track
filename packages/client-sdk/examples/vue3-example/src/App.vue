@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import track from '@track/sdk'
 
-const endpoint = ref(import.meta.env.VITE_TRACK_ENDPOINT || 'http://localhost:8080')
-const appId = ref('example-app-id')
+const endpoint = ref((typeof window !== 'undefined' && window.location.origin) || '')
+const appId = ref('vue3-example-app-id')
+const appName = ref('Vue3 Example')
 const userId = ref('user-123')
 const sessionTTL = ref<number | string>(1440)
 
@@ -35,12 +36,15 @@ async function onInit() {
     setStatus('⏳ 正在初始化...', 'info')
     log('正在初始化 SDK...', 'info')
 
+    const cfg: any = {
+      appId: appId.value,
+      userId: userId.value,
+      userProps: { plan: 'premium', version: '1.0.0', source: 'vue3-example' },
+    }
+    if (appName.value) cfg.appName = appName.value
+
     await track.init(
-      {
-        appId: appId.value,
-        userId: userId.value,
-        userProps: { plan: 'premium', version: '1.0.0', source: 'vue3-example' },
-      },
+      cfg,
       {
         endpoint: endpoint.value,
         autoTrack: true,
@@ -156,6 +160,12 @@ function onTestPv() {
           <label>应用 ID (App ID)</label>
           <input v-model="appId" />
         </div>
+        <div class="input-group">
+          <label>项目名 (App Name，可选)</label>
+          <input v-model="appName" placeholder="不填则使用 App ID" />
+        </div>
+      </div>
+      <div class="grid-2">
         <div class="input-group">
           <label>用户 ID (User ID)</label>
           <input v-model="userId" />

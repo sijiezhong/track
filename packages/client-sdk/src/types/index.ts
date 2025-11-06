@@ -16,6 +16,7 @@ export enum EventType {
  */
 export interface UserConfig {
   appId: string;
+  appName?: string;
   userId: string;
   userProps?: Record<string, any>;
 }

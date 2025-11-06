@@ -14,6 +14,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class SessionRequest {
     private String appId;
+    private String appName; // 可选，未提供时使用 appId 作为项目名
     private String userId;
     private Map<String, Object> userProps;
     private Integer ttlMinutes; // 可选，默认 1440（24小时），0 表示不过期

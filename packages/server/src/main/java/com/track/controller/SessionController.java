@@ -3,6 +3,7 @@ package com.track.controller;
 import com.track.dto.SessionRequest;
 import com.track.dto.SessionResponse;
 import com.track.dto.SessionInfo;
+import com.track.dto.ErrorResponse;
 import com.track.entity.Project;
 import com.track.repository.ProjectRepository;
 import com.track.service.SessionService;
@@ -41,10 +42,21 @@ public class SessionController {
             @RequestBody SessionRequest request,
             HttpServletResponse response) {
         
-        // 验证 AppId
+        // 验证 / 初始化 AppId
         Optional<Project> projectOpt = projectRepository.findByAppId(request.getAppId());
-        if (projectOpt.isEmpty() || !projectOpt.get().getIsActive()) {
-            return ResponseEntity.badRequest().build();
+        if (projectOpt.isEmpty()) {
+            // 不存在则自动创建项目（appName 为空时用 appId 作为项目名）
+            Project newProject = new Project();
+            newProject.setAppId(request.getAppId());
+            newProject.setAppName(request.getAppName() != null && !request.getAppName().isEmpty()
+                    ? request.getAppName()
+                    : request.getAppId());
+            newProject.setIsActive(true);
+            projectRepository.save(newProject);
+        } else if (!projectOpt.get().getIsActive()) {
+            // 已存在但未激活
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("INACTIVE_PROJECT", "项目已被禁用，请联系管理员启用"));
         }
         
         // 生成 sessionId

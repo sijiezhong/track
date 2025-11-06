@@ -57,6 +57,14 @@ class SessionControllerIntegrationTest {
         project.setIsActive(true);
         when(projectRepository.findByAppId(appId)).thenReturn(Optional.of(project));
         when(projectRepository.findByAppId("invalid-app")).thenReturn(Optional.empty());
+        // 对于自动创建项目的场景，模拟 save 返回新建项目
+        when(projectRepository.save(org.mockito.ArgumentMatchers.any(Project.class)))
+                .thenAnswer(invocation -> {
+                    Project p = invocation.getArgument(0);
+                    if (p.getAppName() == null) p.setAppName(p.getAppId());
+                    p.setIsActive(true);
+                    return p;
+                });
         
         // SessionService default stubs
         doNothing().when(sessionService).saveSession(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyMap(), anyInt());
@@ -93,12 +101,35 @@ class SessionControllerIntegrationTest {
     }
     
     @Test
-    void testCreateSessionWithInvalidAppId() throws Exception {
+    void testCreateSessionWithUnknownAppId_AutoCreateProject() throws Exception {
         // Given
         SessionRequest request = new SessionRequest();
         request.setAppId("invalid-app");
+        request.setAppName("Auto Name");
         request.setUserId("user-123");
-        
+
+        // When & Then：应自动创建项目并成功下发 session
+        mockMvc.perform(post("/api/session")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andExpect(cookie().exists("track_session_id"));
+    }
+
+    @Test
+    void testCreateSessionWithInactiveProject_Should400() throws Exception {
+        // Given：inactive 项目
+        String inactiveApp = "inactive-app";
+        Project inactiveProject = new Project();
+        inactiveProject.setAppId(inactiveApp);
+        inactiveProject.setAppName("Inactive");
+        inactiveProject.setIsActive(false);
+        when(projectRepository.findByAppId(inactiveApp)).thenReturn(Optional.of(inactiveProject));
+
+        SessionRequest request = new SessionRequest();
+        request.setAppId(inactiveApp);
+        request.setUserId("user-123");
+
         // When & Then
         mockMvc.perform(post("/api/session")
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)

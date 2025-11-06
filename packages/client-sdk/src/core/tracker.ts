@@ -73,6 +73,7 @@ export class Track {
         },
         body: JSON.stringify({
           appId: userConfig.appId,
+          appName: userConfig.appName,
           userId: userConfig.userId,
           userProps: userConfig.userProps || {},
           ttlMinutes: sessionTTL === 0 ? null : sessionTTL, // 0 表示不过期
