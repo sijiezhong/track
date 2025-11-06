@@ -50,8 +50,8 @@ public class AnalyticsService {
         // 只有当提供了时间范围时才添加时间条件
         if (startTime != null && endTime != null) {
             spec = spec.and((root, query, cb) -> 
-                cb.between(root.get("serverTimestamp"), startTime, endTime)
-            );
+            cb.between(root.get("serverTimestamp"), startTime, endTime)
+        );
         }
         
         if (pageUrl != null && !pageUrl.isEmpty()) {
@@ -74,14 +74,14 @@ public class AnalyticsService {
         List<Predicate> predicates = new ArrayList<>();
         
         if (appId != null && !appId.isEmpty()) {
-            predicates.add(cb.equal(root.get("appId"), appId));
+        predicates.add(cb.equal(root.get("appId"), appId));
         }
         
         predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
         
         // 只有当提供了时间范围时才添加时间条件
         if (startTime != null && endTime != null) {
-            predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
+        predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
         }
         
         if (pageUrl != null && !pageUrl.isEmpty()) {
@@ -134,8 +134,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         
         Object result = query.getSingleResult();
@@ -232,8 +232,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
@@ -286,8 +286,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("limit", limit);
         
@@ -332,8 +332,8 @@ public class AnalyticsService {
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("appId", appId);
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         
         @SuppressWarnings("unchecked")
@@ -373,8 +373,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("metric", metric.toLowerCase());
         
@@ -430,8 +430,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("metric", metric.toLowerCase());
         query.setParameter("timezone", timezone.getId());
@@ -480,8 +480,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
@@ -518,8 +518,8 @@ public class AnalyticsService {
         // 只有当提供了时间范围时才添加时间条件
         if (startTime != null && endTime != null) {
             spec = spec.and((root, query, cb) -> 
-                cb.between(root.get("serverTimestamp"), startTime, endTime)
-            );
+            cb.between(root.get("serverTimestamp"), startTime, endTime)
+        );
         }
         
         if (eventId != null && !eventId.isEmpty()) {
@@ -559,8 +559,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("limit", limit);
         
@@ -614,8 +614,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("timezone", timezone.getId());
         query.setParameter("dateFormat", dateFormat);
@@ -665,8 +665,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         query.setParameter("limit", limit);
         
@@ -707,8 +707,8 @@ public class AnalyticsService {
         query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
         }
         
         Object result = query.getSingleResult();
