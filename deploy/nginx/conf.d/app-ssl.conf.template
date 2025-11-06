@@ -24,6 +24,39 @@ server {
         proxy_buffering off;
     }
 
+    # Swagger UI 入口页面
+    location = /swagger-ui.html {
+        proxy_pass http://api:8080/swagger-ui.html;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+
+    # Swagger UI 静态资源
+    location /swagger-ui/ {
+        proxy_pass http://api:8080/swagger-ui/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+
+    # OpenAPI 文档接口
+    location /api-docs {
+        proxy_pass http://api:8080/api-docs;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+
     # 单页应用前端路由回退
     location / {
         try_files $uri $uri/ /index.html;
