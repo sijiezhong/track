@@ -179,8 +179,12 @@ jobs:
           # 解压前端静态资源至 deploy/static
           mkdir -p /opt/track/deploy/static
           tar -xzf dashboard-dist.tar.gz -C /opt/track/deploy/static --strip-components=1 || true
+          # 清理临时压缩包
+          rm -f dashboard-dist.tar.gz
           # 使用 docker compose 启动（仅 HTTP）
           docker compose -f /opt/track/deploy/docker-compose.yml up -d --build
+          # 清理未使用的 Docker 镜像和构建缓存（保留正在使用的）
+          docker system prune -f --volumes=false || true
           EOF
 
       - name: 申请/续期证书（certbot，webroot 模式）
