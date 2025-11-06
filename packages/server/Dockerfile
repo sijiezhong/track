@@ -53,5 +53,7 @@ WORKDIR /app
 RUN apk add --no-cache wget
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=10 \
+  CMD wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '"status":"UP"' || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
