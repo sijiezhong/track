@@ -99,7 +99,7 @@ jobs:
           ./mvnw -q -DskipITs test
 
   build_dashboard:
-    name: 构建前端产物
+    name: 构建 Dashboard 产物
     runs-on: ubuntu-latest
     needs: [test_dashboard, test_server]
     outputs:
@@ -131,8 +131,8 @@ jobs:
           path: artifacts/dashboard-dist.tar.gz
           if-no-files-found: error
 
-  build_examples:
-    name: 构建示例项目
+  build_sdk:
+    name: 构建 SDK（供示例使用）
     runs-on: ubuntu-latest
     needs: [test_dashboard, test_server]
     steps:
@@ -146,35 +146,95 @@ jobs:
           cache: 'pnpm'
       - name: 清理 pnpm 缓存
         run: pnpm store prune || true
-      - name: 构建 SDK（供示例 link 使用）
+      - name: 安装并构建 SDK
         working-directory: packages/client-sdk
         run: |
           pnpm install --frozen-lockfile=false
           pnpm build
-      - name: 构建 vue3-example
-        working-directory: packages/client-sdk/examples/vue3-example
+      - name: 上传 SDK 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-sdk-dist
+          path: packages/client-sdk/dist
+          if-no-files-found: error
+
+  build_example:
+    name: 构建示例项目（并发）
+    runs-on: ubuntu-latest
+    needs: [build_sdk]
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - id: vue3
+            dir: packages/client-sdk/examples/vue3-example
+            out_dir: dist
+            build: |
+              pnpm install --frozen-lockfile=false
+              pnpm build
+          - id: next
+            dir: packages/client-sdk/examples/nextjs-example
+            out_dir: out
+            build: |
+              pnpm install --frozen-lockfile=false
+              pnpm build
+              npx next export
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - name: 清理 pnpm 缓存
+        run: pnpm store prune || true
+      - name: 下载 SDK 产物
+        uses: actions/download-artifact@v4
+        with:
+          name: client-sdk-dist
+          path: packages/client-sdk/dist
+      - name: 构建示例 ${{ matrix.example.id }}
+        working-directory: ${{ matrix.example.dir }}
         run: |
-          pnpm install --frozen-lockfile=false
-          pnpm build
-      - name: 构建 nextjs-example（静态导出）
-        working-directory: packages/client-sdk/examples/nextjs-example
+          ${{ matrix.example.build }}
+      - name: 上传示例产物 ${{ matrix.example.id }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-${{ matrix.example.id }}
+          path: ${{ matrix.example.dir }}/${{ matrix.example.out_dir }}
+          if-no-files-found: error
+
+  assemble_examples:
+    name: 汇总示例产物
+    runs-on: ubuntu-latest
+    needs: [build_example]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 下载示例（vue3）
+        uses: actions/download-artifact@v4
+        with:
+          name: example-vue3
+          path: artifacts/examples/vue3
+      - name: 下载示例（next）
+        uses: actions/download-artifact@v4
+        with:
+          name: example-next
+          path: artifacts/examples/next
+      - name: 下载 SDK 产物
+        uses: actions/download-artifact@v4
+        with:
+          name: client-sdk-dist
+          path: artifacts/examples/dist
+      - name: 拷贝 vanilla 示例
         run: |
-          pnpm install --frozen-lockfile=false
-          pnpm build
-          npx next export
+          mkdir -p artifacts/examples/vanilla
+          cp -r packages/client-sdk/examples/vanilla-example/* artifacts/examples/vanilla/
       - name: 打包示例产物
         run: |
-          mkdir -p artifacts/examples
-          # vanilla 示例静态拷贝
-          cp -r packages/client-sdk/examples/vanilla-example artifacts/examples/vanilla
-          # vue3 示例产物
-          cp -r packages/client-sdk/examples/vue3-example/dist artifacts/examples/vue3
-          # next 示例产物
-          cp -r packages/client-sdk/examples/nextjs-example/out artifacts/examples/next
-          # 复制 SDK dist 以供 vanilla 示例引用 ../../dist/index.umd.js
-          cp -r packages/client-sdk/dist artifacts/examples/dist
           tar -czf artifacts/examples-dist.tar.gz -C artifacts examples
-      - name: 上传示例产物
+      - name: 上传示例产物（汇总）
         uses: actions/upload-artifact@v4
         with:
           name: examples-dist
@@ -184,7 +244,7 @@ jobs:
   provision_and_deploy:
     name: 配置服务器并部署
     runs-on: ubuntu-latest
-    needs: [build_dashboard, build_examples]
+    needs: [build_dashboard, assemble_examples]
     steps:
       - uses: actions/checkout@v4
 
