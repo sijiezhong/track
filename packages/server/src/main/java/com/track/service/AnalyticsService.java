@@ -465,8 +465,8 @@ public class AnalyticsService {
                     TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
                     COUNT(*) as count
                 FROM events
-                WHERE (:appId IS NULL OR app_id = :appId)
-                  AND event_type_id = :eventTypeId
+                WHERE event_type_id = :eventTypeId
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
                   """ + timeCondition + """
                 """ + (eventId != null && !eventId.isEmpty() ? "AND custom_event_id = :eventId" : "") + """
                 GROUP BY ts
@@ -474,7 +474,9 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
+        if (appId != null && !appId.isEmpty()) {
+            query.setParameter("appId", appId);
+        }
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
