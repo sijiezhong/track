@@ -258,7 +258,7 @@ public class AnalyticsService {
                     COALESCE(AVG(
                         CASE
                             WHEN (properties->>'duration') ~ '^[0-9]+(\\.[0-9]+)?$'
-                            THEN (properties->>'duration')::numeric
+                            THEN CAST((properties->>'duration') AS numeric)
                             ELSE NULL
                         END
                     ), 0) as avg_duration
@@ -352,9 +352,9 @@ public class AnalyticsService {
 
         String sql = """
                 SELECT
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p50,
-                    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p75,
-                    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p95
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p50,
+                    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p75,
+                    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p95
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
@@ -409,9 +409,9 @@ public class AnalyticsService {
         String sql = """
                 SELECT
                     TO_CHAR(server_timestamp AT TIME ZONE :timezone, :dateFormat) as ts,
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p50,
-                    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p75,
-                    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (properties->>:metric)::numeric) as p95
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p50,
+                    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p75,
+                    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p95
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
