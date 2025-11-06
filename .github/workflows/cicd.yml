@@ -131,10 +131,60 @@ jobs:
           path: artifacts/dashboard-dist.tar.gz
           if-no-files-found: error
 
+  build_examples:
+    name: 构建示例项目
+    runs-on: ubuntu-latest
+    needs: [test_dashboard, test_server]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - name: 清理 pnpm 缓存
+        run: pnpm store prune || true
+      - name: 构建 SDK（供示例 link 使用）
+        working-directory: packages/client-sdk
+        run: |
+          pnpm install --frozen-lockfile=false
+          pnpm build
+      - name: 构建 vue3-example
+        working-directory: packages/client-sdk/examples/vue3-example
+        run: |
+          pnpm install --frozen-lockfile=false
+          pnpm build
+      - name: 构建 nextjs-example（静态导出）
+        working-directory: packages/client-sdk/examples/nextjs-example
+        run: |
+          pnpm install --frozen-lockfile=false
+          pnpm build
+          npx next export
+      - name: 打包示例产物
+        run: |
+          mkdir -p artifacts/examples
+          # vanilla 示例静态拷贝
+          cp -r packages/client-sdk/examples/vanilla-example artifacts/examples/vanilla
+          # vue3 示例产物
+          cp -r packages/client-sdk/examples/vue3-example/dist artifacts/examples/vue3
+          # next 示例产物
+          cp -r packages/client-sdk/examples/nextjs-example/out artifacts/examples/next
+          # 复制 SDK dist 以供 vanilla 示例引用 ../../dist/index.umd.js
+          cp -r packages/client-sdk/dist artifacts/examples/dist
+          tar -czf artifacts/examples-dist.tar.gz -C artifacts examples
+      - name: 上传示例产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-dist
+          path: artifacts/examples-dist.tar.gz
+          if-no-files-found: error
+
   provision_and_deploy:
     name: 配置服务器并部署
     runs-on: ubuntu-latest
-    needs: build_dashboard
+    needs: [build_dashboard, build_examples]
     steps:
       - uses: actions/checkout@v4
 
@@ -142,6 +192,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dashboard-dist
+          path: artifacts
+
+      - name: 下载示例产物
+        uses: actions/download-artifact@v4
+        with:
+          name: examples-dist
           path: artifacts
 
       - name: 准备 SSH（再次确保）
@@ -178,6 +234,8 @@ jobs:
             packages/server/ "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/packages/server/
           scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
             artifacts/dashboard-dist.tar.gz "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/
+          scp -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -o ServerAliveCountMax=10 -P "${{ secrets.SERVER_PORT }}" -i ~/.ssh/id_rsa \
+            artifacts/examples-dist.tar.gz "${{ secrets.SERVER_USER }}"@"${{ secrets.SERVER_HOST }}":/opt/track/
 
       - name: 构建与启动（首次 HTTP 服务）
         run: |
@@ -189,6 +247,10 @@ jobs:
           tar -xzf dashboard-dist.tar.gz -C /opt/track/deploy/static --strip-components=1 || true
           # 清理临时压缩包
           rm -f dashboard-dist.tar.gz
+          # 解压示例到 /opt/track/deploy/static/examples
+          mkdir -p /opt/track/deploy/static/examples
+          tar -xzf examples-dist.tar.gz -C /opt/track/deploy/static --strip-components=1 || true
+          rm -f examples-dist.tar.gz
           # 使用 docker compose 启动（仅 HTTP，添加超时和保活）
           # 设置 DOCKER_BUILDKIT=1 可提高构建稳定性，COMPOSE_HTTP_TIMEOUT 延长超时时间
           DOCKER_BUILDKIT=1 COMPOSE_HTTP_TIMEOUT=600 docker compose -f /opt/track/deploy/docker-compose.yml up -d --build
