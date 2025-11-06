@@ -49,6 +49,8 @@ RUN mvn -s /root/.m2/settings.xml -B -e -DskipTests clean package
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+# 安装 wget 用于健康检查
+RUN apk add --no-cache wget
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
