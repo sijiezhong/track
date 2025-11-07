@@ -233,7 +233,7 @@ public class AnalyticsService {
         }
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -244,7 +244,7 @@ public class AnalyticsService {
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
-                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
+                """ + timeCondition + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
@@ -279,7 +279,7 @@ public class AnalyticsService {
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -296,7 +296,7 @@ public class AnalyticsService {
                     ), 0) as avg_duration
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
                 """ + timeCondition + """
                   AND page_url IS NOT NULL
                 GROUP BY page_url
@@ -334,7 +334,7 @@ public class AnalyticsService {
             String appId, LocalDateTime startTime, LocalDateTime endTime) {
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND e.server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND e.server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -347,7 +347,7 @@ public class AnalyticsService {
                 FROM events e
                 LEFT JOIN event_types et ON e.event_type_id = et.id
                 WHERE 1=1
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND e.app_id = :appId\n" : "") + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND e.app_id = :appId" : "") + """
                 """ + timeCondition + """
                 GROUP BY type
                 ORDER BY value DESC
@@ -379,7 +379,7 @@ public class AnalyticsService {
             String appId, LocalDateTime startTime, LocalDateTime endTime, String metric) {
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -389,7 +389,7 @@ public class AnalyticsService {
                     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p95
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
                 """ + timeCondition + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
@@ -435,7 +435,7 @@ public class AnalyticsService {
         }
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -447,7 +447,7 @@ public class AnalyticsService {
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
-                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
+                """ + timeCondition + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
                 GROUP BY ts
@@ -489,7 +489,7 @@ public class AnalyticsService {
         String dateFormat = "hour".equals(groupBy.toLowerCase()) ? "YYYY-MM-DD HH24:00" : "YYYY-MM-DD";
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -499,8 +499,9 @@ public class AnalyticsService {
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
-                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
-                """ + (eventId != null && !eventId.isEmpty() ? "\n                AND custom_event_id = :eventId" : "")
+                """ + timeCondition + """
+                """
+                + (eventId != null && !eventId.isEmpty() ? "\n                  AND custom_event_id = :eventId" : "")
                 + """
                         GROUP BY ts
                         ORDER BY ts
@@ -563,7 +564,7 @@ public class AnalyticsService {
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -572,7 +573,7 @@ public class AnalyticsService {
                     COUNT(*) as count
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
                 """ + timeCondition + """
                   AND custom_event_id IS NOT NULL
                 GROUP BY custom_event_id
@@ -621,7 +622,7 @@ public class AnalyticsService {
         }
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -631,7 +632,7 @@ public class AnalyticsService {
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
-                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
+                """ + timeCondition + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
@@ -666,7 +667,7 @@ public class AnalyticsService {
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
 
         String timeCondition = (startTime != null && endTime != null)
-                ? "AND server_timestamp BETWEEN :startTime AND :endTime"
+                ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
 
         String sql = """
@@ -681,7 +682,7 @@ public class AnalyticsService {
                     MAX(server_timestamp) as last_seen
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
                 """ + timeCondition + """
                 GROUP BY fingerprint, message
                 ORDER BY count DESC
