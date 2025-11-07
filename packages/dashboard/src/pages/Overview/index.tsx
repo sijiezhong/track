@@ -49,6 +49,17 @@ export default function Overview() {
   } | null>(null);
 
   useEffect(() => {
+    // 如果未选择项目，不调用接口
+    if (!appId) {
+      setKpi(null);
+      setSeries([]);
+      setPagesTop([]);
+      setDist([]);
+      setVitals(null);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     setLoading(true);
     Promise.all([
@@ -104,7 +115,6 @@ export default function Overview() {
   return (
     <div className="space-y-8">
       <OverviewHero />
-      {/* App ID 非必填，未选择时查询全量 */}
 
       {/* 第一行：KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">

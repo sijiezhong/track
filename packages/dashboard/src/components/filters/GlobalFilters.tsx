@@ -31,6 +31,10 @@ export default function GlobalFilters() {
       .then((list) => {
         if (!mounted) return;
         setProjects(list);
+        // 如果项目列表不为空且当前没有选择项目，自动选择第一项
+        if (list.length > 0 && !appId) {
+          setAppId(list[0].appId);
+        }
       })
       .finally(() => {
         if (!mounted) return;
@@ -39,7 +43,7 @@ export default function GlobalFilters() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [appId, setAppId]);
 
   const toInput = (d?: Date | null) => {
     if (!d) return "";
@@ -73,10 +77,18 @@ export default function GlobalFilters() {
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-2">
-        <Label className="text-xs text-zinc-500">App</Label>
+        <Label className="text-xs text-zinc-500">项目</Label>
         <Select value={appId} onValueChange={setAppId}>
           <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder={loading ? "加载中…" : "请选择 App ID"} />
+            <SelectValue
+              placeholder={
+                loading
+                  ? "加载中…"
+                  : projects.length === 0
+                    ? "暂无项目"
+                    : "请选择项目"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {projects.map((p) => (

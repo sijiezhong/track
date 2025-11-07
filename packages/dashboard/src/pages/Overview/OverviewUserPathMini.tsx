@@ -16,6 +16,13 @@ export default function OverviewUserPathMini({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // 如果未选择项目，不调用接口
+    if (!appId) {
+      setGraph({ nodes: [], edges: [] });
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     setLoading(true);
     getEvents({

@@ -33,6 +33,13 @@ export default function Events() {
   const canQuery = useMemo(() => appId && appId.length > 0, [appId]);
 
   useEffect(() => {
+    // 如果未选择项目，不调用接口
+    if (!appId) {
+      setRows([]);
+      setTotal(0);
+      return;
+    }
+
     let mounted = true;
     getEvents({
       appId: appId || undefined,

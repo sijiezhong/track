@@ -25,6 +25,12 @@ export default function AnalyticsPages() {
   const canQuery = useMemo(() => appId && appId.length > 0, [appId]);
 
   useEffect(() => {
+    // 如果未选择项目，不调用接口
+    if (!appId) {
+      setRows([]);
+      return;
+    }
+
     let mounted = true;
     getPagesTop({
       appId: appId || undefined,

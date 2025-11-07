@@ -13,6 +13,12 @@ export default function AnalyticsTrends() {
   >([]);
 
   useEffect(() => {
+    // 如果未选择项目，不调用接口
+    if (!appId) {
+      setSeries([]);
+      return;
+    }
+
     let mounted = true;
     getPVUVSeries({
       appId: appId || undefined,

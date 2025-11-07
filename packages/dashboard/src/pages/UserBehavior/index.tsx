@@ -14,6 +14,12 @@ export default function UserBehavior() {
   const [graphKey, setGraphKey] = useState(0);
 
   useEffect(() => {
+    // 如果未选择项目，不调用接口
+    if (!appId) {
+      setGraph({ nodes: [], edges: [] });
+      return;
+    }
+
     let mounted = true;
     getEvents({
       appId: appId || undefined,
