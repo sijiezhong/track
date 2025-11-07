@@ -87,7 +87,7 @@ class TrackControllerIntegrationTest {
         when(sessionService.getSession(sessionId)).thenReturn(sessionInfo);
         
         TrackBatchRequest request = new TrackBatchRequest();
-        request.setEvents(new java.util.ArrayList<>());
+        request.setE(new java.util.ArrayList<>());
         
         // When & Then
         mockMvc.perform(post("/api/ingest")
@@ -104,7 +104,7 @@ class TrackControllerIntegrationTest {
     void testIngestEvent_WithoutCookie_Returns401() throws Exception {
         // Given
         TrackBatchRequest request = new TrackBatchRequest();
-        request.setEvents(new java.util.ArrayList<>());
+        request.setE(new java.util.ArrayList<>());
         
         // When & Then
         mockMvc.perform(post("/api/ingest")
@@ -122,7 +122,7 @@ class TrackControllerIntegrationTest {
         when(sessionService.getSession(sessionId)).thenReturn(null);
         
         TrackBatchRequest request = new TrackBatchRequest();
-        request.setEvents(new java.util.ArrayList<>());
+        request.setE(new java.util.ArrayList<>());
         
         // When & Then
         mockMvc.perform(post("/api/ingest")
@@ -142,7 +142,7 @@ class TrackControllerIntegrationTest {
         when(trackService.validateAppId(appId)).thenReturn(false);
         
         TrackBatchRequest request = new TrackBatchRequest();
-        request.setEvents(new java.util.ArrayList<>());
+        request.setE(new java.util.ArrayList<>());
         
         // When & Then
         mockMvc.perform(post("/api/ingest")
@@ -162,7 +162,7 @@ class TrackControllerIntegrationTest {
         when(rateLimitService.isAllowed(anyString(), anyString())).thenReturn(false);
         
         TrackBatchRequest request = new TrackBatchRequest();
-        request.setEvents(new java.util.ArrayList<>());
+        request.setE(new java.util.ArrayList<>());
         
         // When & Then
         mockMvc.perform(post("/api/ingest")
