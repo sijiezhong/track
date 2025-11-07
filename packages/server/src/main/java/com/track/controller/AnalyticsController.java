@@ -42,7 +42,13 @@ public class AnalyticsController {
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
-        ZoneId zoneId = ZoneId.of(timezone);
+        // 验证时区有效性
+        try {
+            ZoneId.of(timezone);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid timezone: " + timezone);
+        }
+        
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
         startTime = startTime != null ? startTime : LocalDateTime.now().minusDays(7);
