@@ -33,7 +33,7 @@ export default function AnalyticsPages() {
 
     let mounted = true;
     getPagesTop({
-      appId: appId || undefined,
+      appId: appId,
       start: start || undefined,
       end: end || undefined,
       limit: 100,

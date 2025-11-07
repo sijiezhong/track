@@ -1,7 +1,7 @@
 import { api } from "./http";
 
 export async function getOverview(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
 }) {
@@ -16,7 +16,7 @@ export async function getOverview(params: {
 }
 
 export async function getPVUVSeries(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   interval: "minute" | "hour" | "day";
@@ -30,7 +30,7 @@ export async function getPVUVSeries(params: {
 }
 
 export async function getPagesTop(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   limit?: number;
@@ -43,7 +43,7 @@ export async function getPagesTop(params: {
 }
 
 export async function getEventsDistribution(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
 }) {
@@ -54,7 +54,7 @@ export async function getEventsDistribution(params: {
 }
 
 export async function getWebVitals(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   metric?: string;
@@ -64,7 +64,7 @@ export async function getWebVitals(params: {
 }
 
 export async function getCustomEvents(params: {
-  appId?: string;
+  appId: string;
   eventId?: string;
   start?: string;
   end?: string;
@@ -79,7 +79,7 @@ export async function getCustomEvents(params: {
 }
 
 export async function getCustomEventsTop(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   limit?: number;
@@ -91,7 +91,7 @@ export async function getCustomEventsTop(params: {
 }
 
 export async function getWebVitalsSeries(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   metric: string;
@@ -108,7 +108,7 @@ export async function getWebVitalsSeries(params: {
 }
 
 export async function getErrorsTrend(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   interval?: "hour" | "day";
@@ -122,7 +122,7 @@ export async function getErrorsTrend(params: {
 }
 
 export async function getErrorsTop(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   limit?: number;

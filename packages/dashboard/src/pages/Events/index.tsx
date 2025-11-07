@@ -42,7 +42,7 @@ export default function Events() {
 
     let mounted = true;
     getEvents({
-      appId: appId || undefined,
+      appId: appId,
       start: start || undefined,
       end: end || undefined,
       keyword,

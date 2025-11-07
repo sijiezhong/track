@@ -13,9 +13,11 @@ import java.util.Map;
 
 /**
  * 事件实体
+ * 注意：使用复合主键 (id, app_id) 以支持 PostgreSQL 分区表
  */
 @Entity
 @Table(name = "events")
+@IdClass(EventId.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,6 +26,7 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Id
     @Column(name = "app_id", nullable = false, length = 64)
     private String appId;
     

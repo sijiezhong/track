@@ -27,6 +27,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
     
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+            org.springframework.web.bind.MissingServletRequestParameterException e) {
+        String traceId = UUID.randomUUID().toString();
+        log.error("Missing request parameter [traceId: {}]: {}", traceId, e.getMessage(), e);
+        
+        String message = String.format("Required request parameter '%s' is not present", e.getParameterName());
+        ErrorResponse error = new ErrorResponse("BAD_REQUEST", message, traceId);
+        return ResponseEntity.badRequest().body(error);
+    }
+    
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         String traceId = UUID.randomUUID().toString();

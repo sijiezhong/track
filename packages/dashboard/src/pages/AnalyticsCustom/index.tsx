@@ -40,13 +40,13 @@ export default function AnalyticsCustom() {
     setLoading(true);
     Promise.all([
       getCustomEvents({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         groupBy: "hour",
       }),
       getCustomEventsTop({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         limit: 100,

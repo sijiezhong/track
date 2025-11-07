@@ -37,12 +37,16 @@ public class AnalyticsService {
      * 统计 PV（页面浏览量）
      */
     public long getPV(String appId, LocalDateTime startTime, LocalDateTime endTime, String pageUrl) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         try {
             Specification<Event> spec = Specification.where(null);
 
-            if (appId != null && !appId.isEmpty()) {
-                spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
-            }
+            // appId 现在是必填的，直接添加条件
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
 
             spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
 
@@ -68,6 +72,11 @@ public class AnalyticsService {
      * 统计 UV（独立访客数）
      */
     public long getUV(String appId, LocalDateTime startTime, LocalDateTime endTime, String pageUrl) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         try {
             CriteriaBuilder cb = entityManager.getCriteriaBuilder();
             CriteriaQuery<Long> query = cb.createQuery(Long.class);
@@ -75,9 +84,8 @@ public class AnalyticsService {
 
             List<Predicate> predicates = new ArrayList<>();
 
-            if (appId != null && !appId.isEmpty()) {
-                predicates.add(cb.equal(root.get("appId"), appId));
-            }
+            // appId 现在是必填的，直接添加条件
+            predicates.add(cb.equal(root.get("appId"), appId));
 
             predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
 
@@ -108,6 +116,11 @@ public class AnalyticsService {
      * 计算跳出率
      */
     public double getBounceRate(String appId, LocalDateTime startTime, LocalDateTime endTime) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         try {
             long totalUV = getUV(appId, startTime, endTime, null);
 
@@ -126,13 +139,13 @@ public class AnalyticsService {
             String sql = """
                     SELECT COUNT(DISTINCT e1.user_id)
                     FROM events e1
-                    WHERE (:appId IS NULL OR e1.app_id = :appId)
+                    WHERE e1.app_id = :appId
                       AND e1.event_type_id = :eventTypeId
                       """ + timeCondition + """
                     AND (
                       SELECT COUNT(DISTINCT e2.page_url)
                       FROM events e2
-                      WHERE (:appId IS NULL OR e2.app_id = :appId)
+                      WHERE e2.app_id = :appId
                         AND e2.event_type_id = :eventTypeId
                         """ + subTimeCondition + """
                           AND e2.user_id = e1.user_id
@@ -167,12 +180,16 @@ public class AnalyticsService {
      * 计算平均停留时长（秒）
      */
     public double getAvgDuration(String appId, LocalDateTime startTime, LocalDateTime endTime) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         try {
             Specification<Event> spec = Specification.where(null);
 
-            if (appId != null && !appId.isEmpty()) {
-                spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
-            }
+            // appId 现在是必填的，直接添加条件
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
 
             spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_STAY.getCode()))
                     .and((root, query, cb) -> cb.isNotNull(root.get("properties")));
@@ -216,6 +233,10 @@ public class AnalyticsService {
     public List<PvUvSeriesResponse.TimeSeriesPoint> getPvUvSeries(
             String appId, LocalDateTime startTime, LocalDateTime endTime,
             String interval, ZoneId timezone) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String dateFormat;
         switch (interval.toLowerCase()) {
@@ -243,16 +264,15 @@ public class AnalyticsService {
                     COUNT(DISTINCT user_id) as uv
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -277,6 +297,10 @@ public class AnalyticsService {
      */
     public List<PagesTopResponse.PageStats> getPagesTop(
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String timeCondition = (startTime != null && endTime != null)
                 ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
@@ -296,7 +320,7 @@ public class AnalyticsService {
                     ), 0) as avg_duration
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                   AND page_url IS NOT NULL
                 GROUP BY page_url
@@ -305,9 +329,8 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -332,6 +355,10 @@ public class AnalyticsService {
      */
     public List<EventsDistributionResponse.TypeDistribution> getEventsDistribution(
             String appId, LocalDateTime startTime, LocalDateTime endTime) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String timeCondition = (startTime != null && endTime != null)
                 ? "\n                  AND e.server_timestamp BETWEEN :startTime AND :endTime"
@@ -347,16 +374,15 @@ public class AnalyticsService {
                 FROM events e
                 LEFT JOIN event_types et ON e.event_type_id = et.id
                 WHERE 1=1
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND e.app_id = :appId" : "") + """
+                """ + "\n                  AND e.app_id = :appId" + """
                 """ + timeCondition + """
                 GROUP BY type
                 ORDER BY value DESC
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
             query.setParameter("endTime", endTime);
@@ -377,6 +403,10 @@ public class AnalyticsService {
      */
     public WebVitalsResponse getWebVitals(
             String appId, LocalDateTime startTime, LocalDateTime endTime, String metric) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String timeCondition = (startTime != null && endTime != null)
                 ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
@@ -389,16 +419,15 @@ public class AnalyticsService {
                     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p95
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -421,6 +450,10 @@ public class AnalyticsService {
     public List<WebVitalsSeriesResponse.WebVitalsPoint> getWebVitalsSeries(
             String appId, LocalDateTime startTime, LocalDateTime endTime,
             String metric, String interval, ZoneId timezone) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String dateFormat;
         switch (interval.toLowerCase()) {
@@ -446,7 +479,7 @@ public class AnalyticsService {
                     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p95
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
@@ -455,9 +488,8 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -485,6 +517,10 @@ public class AnalyticsService {
     public List<CustomEventsSeriesResponse.CustomEventPoint> getCustomEventsSeries(
             String appId, String eventId, LocalDateTime startTime, LocalDateTime endTime,
             String groupBy, ZoneId timezone) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String dateFormat = "hour".equals(groupBy.toLowerCase()) ? "YYYY-MM-DD HH24:00" : "YYYY-MM-DD";
 
@@ -498,7 +534,7 @@ public class AnalyticsService {
                     COUNT(*) as count
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                 """
                 + (eventId != null && !eventId.isEmpty() ? "\n                  AND custom_event_id = :eventId" : "")
@@ -508,9 +544,8 @@ public class AnalyticsService {
                         """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -537,11 +572,15 @@ public class AnalyticsService {
      */
     public long getCustomEventsTotal(String appId, String eventId,
             LocalDateTime startTime, LocalDateTime endTime) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         Specification<Event> spec = Specification.where(null);
 
-        if (appId != null && !appId.isEmpty()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
-        }
+        // appId 现在是必填的，直接添加条件
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
 
         spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.CUSTOM.getCode()));
 
@@ -562,6 +601,10 @@ public class AnalyticsService {
      */
     public List<CustomEventsTopResponse.CustomEventStats> getCustomEventsTop(
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String timeCondition = (startTime != null && endTime != null)
                 ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
@@ -573,7 +616,7 @@ public class AnalyticsService {
                     COUNT(*) as count
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                   AND custom_event_id IS NOT NULL
                 GROUP BY custom_event_id
@@ -582,9 +625,8 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -631,16 +673,15 @@ public class AnalyticsService {
                     COUNT(*) as count
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -665,6 +706,10 @@ public class AnalyticsService {
      */
     public List<ErrorsTopResponse.ErrorStats> getErrorsTop(
             String appId, LocalDateTime startTime, LocalDateTime endTime, int limit) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
 
         String timeCondition = (startTime != null && endTime != null)
                 ? "\n                  AND server_timestamp BETWEEN :startTime AND :endTime"
@@ -682,7 +727,7 @@ public class AnalyticsService {
                     MAX(server_timestamp) as last_seen
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + "\n                  AND app_id = :appId" + """
                 """ + timeCondition + """
                 GROUP BY fingerprint, message
                 ORDER BY count DESC
@@ -690,9 +735,8 @@ public class AnalyticsService {
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -719,6 +763,11 @@ public class AnalyticsService {
      * 获取页面 TopN 总数
      */
     public long getPagesTopTotal(String appId, LocalDateTime startTime, LocalDateTime endTime) {
+        // 验证 appId 必填
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         String timeCondition = (startTime != null && endTime != null)
                 ? "AND server_timestamp BETWEEN :startTime AND :endTime"
                 : "";
@@ -727,15 +776,14 @@ public class AnalyticsService {
                 SELECT COUNT(DISTINCT page_url)
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
+                """ + "\n                  AND app_id = :appId\n" + """
                 """ + timeCondition + """
                   AND page_url IS NOT NULL
                 """;
 
         Query query = entityManager.createNativeQuery(sql);
-        if (appId != null && !appId.isEmpty()) {
-            query.setParameter("appId", appId);
-        }
+        // appId 现在是必填的，直接设置参数
+        query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);

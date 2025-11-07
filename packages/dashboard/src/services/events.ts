@@ -1,7 +1,7 @@
 import { api } from "./http";
 
 export async function getEvents(params: {
-  appId?: string;
+  appId: string;
   start?: string;
   end?: string;
   type?: number;

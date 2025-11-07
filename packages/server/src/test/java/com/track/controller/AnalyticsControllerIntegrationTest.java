@@ -118,20 +118,26 @@ class AnalyticsControllerIntegrationTest {
     }
 
     @Test
-    void testGetOverview_WithoutAppId() throws Exception {
-        // Given - appId 是可选的，应该能正常工作
-        when(analyticsService.getPV(isNull(), any(), any(), any())).thenReturn(2000L);
-        when(analyticsService.getUV(isNull(), any(), any(), any())).thenReturn(1000L);
-        when(analyticsService.getBounceRate(isNull(), any(), any())).thenReturn(0.4);
-        when(analyticsService.getAvgDuration(isNull(), any(), any())).thenReturn(150.0);
-
-        // When & Then
+    void testGetOverview_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
         mockMvc.perform(get("/api/analytics/overview")
                 .param("start", startTime.toString())
                 .param("end", endTime.toString()))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.pv").value(2000))
-            .andExpect(jsonPath("$.uv").value(1000));
+            .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    void testGetOverview_WithEmptyAppId_ShouldReturn400() throws Exception {
+        // Given - appId 为空字符串应该返回 400 错误
+        
+        // When & Then - 传递空字符串 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/overview")
+                .param("appId", "")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -186,17 +192,14 @@ class AnalyticsControllerIntegrationTest {
     }
 
     @Test
-    void testGetPvUvSeries_WithoutAppId() throws Exception {
-        // Given - appId 可选，应该能正常工作
-        List<PvUvSeriesResponse.TimeSeriesPoint> series = new ArrayList<>();
-        when(analyticsService.getPvUvSeries(isNull(), any(), any(), any(), any()))
-            .thenReturn(series);
-
-        // When & Then
+    void testGetPvUvSeries_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
         mockMvc.perform(get("/api/analytics/pv-uv/series")
                 .param("start", startTime.toString())
                 .param("end", endTime.toString()))
-            .andExpect(status().isOk());
+            .andExpect(status().isBadRequest());
     }
 
     // ========== getPagesTop 测试 ==========
@@ -256,6 +259,17 @@ class AnalyticsControllerIntegrationTest {
             .andExpect(status().isOk());
     }
 
+    @Test
+    void testGetPagesTop_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/pages/top")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
+    }
+
     // ========== getEventsDistribution 测试 ==========
 
     @Test
@@ -288,6 +302,17 @@ class AnalyticsControllerIntegrationTest {
         assertEquals(3, result.getList().size());
         assertEquals("page_view", result.getList().get(0).getType());
         assertEquals(5000L, result.getList().get(0).getValue());
+    }
+
+    @Test
+    void testGetEventsDistribution_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/events-distribution")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
     }
 
     // ========== getWebVitals 测试 ==========
@@ -338,6 +363,17 @@ class AnalyticsControllerIntegrationTest {
             .andExpect(jsonPath("$.unit").value("ms"));
     }
 
+    @Test
+    void testGetWebVitals_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/web-vitals")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
+    }
+
     // ========== getWebVitalsSeries 测试 ==========
 
     @Test
@@ -373,6 +409,18 @@ class AnalyticsControllerIntegrationTest {
         assertNotNull(result.getSeries().get(0).getP50());
         assertNotNull(result.getSeries().get(0).getP75());
         assertNotNull(result.getSeries().get(0).getP95());
+    }
+
+    @Test
+    void testGetWebVitalsSeries_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/web-vitals/series")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString())
+                .param("metric", "LCP"))
+            .andExpect(status().isBadRequest());
     }
 
     // ========== getCustomEvents 测试 ==========
@@ -432,6 +480,17 @@ class AnalyticsControllerIntegrationTest {
             .andExpect(status().isOk());
     }
 
+    @Test
+    void testGetCustomEvents_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/custom-events")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
+    }
+
     // ========== getCustomEventsTop 测试 ==========
 
     @Test
@@ -470,6 +529,17 @@ class AnalyticsControllerIntegrationTest {
         assertTrue(result.getList().get(0).getCount() >= result.getList().get(1).getCount());
     }
 
+    @Test
+    void testGetCustomEventsTop_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/custom-events/top")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
+    }
+
     // ========== getErrorsTrend 测试 ==========
 
     @Test
@@ -501,6 +571,17 @@ class AnalyticsControllerIntegrationTest {
         ErrorsTrendResponse result = objectMapper.readValue(response, ErrorsTrendResponse.class);
         assertEquals(2, result.getSeries().size());
         assertEquals(10L, result.getSeries().get(0).getCount());
+    }
+
+    @Test
+    void testGetErrorsTrend_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/errors/trend")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
     }
 
     // ========== getErrorsTop 测试 ==========
@@ -541,6 +622,17 @@ class AnalyticsControllerIntegrationTest {
         long total = result.getList().stream().mapToLong(ErrorsTopResponse.ErrorStats::getCount).sum();
         assertEquals(230L, total);
         assertEquals(230L, result.getTotal());
+    }
+
+    @Test
+    void testGetErrorsTop_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(get("/api/analytics/errors/top")
+                .param("start", startTime.toString())
+                .param("end", endTime.toString()))
+            .andExpect(status().isBadRequest());
     }
 }
 

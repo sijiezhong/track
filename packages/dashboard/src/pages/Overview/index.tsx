@@ -64,29 +64,29 @@ export default function Overview() {
     setLoading(true);
     Promise.all([
       getOverview({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
       }),
       getPVUVSeries({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         interval: "hour",
       }),
       getPagesTop({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         limit: 10,
       }),
       getEventsDistribution({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
       }),
       getWebVitals({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         metric: "LCP",

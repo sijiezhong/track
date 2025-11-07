@@ -252,4 +252,45 @@ class SessionControllerIntegrationTest {
                 .cookie(new jakarta.servlet.http.Cookie("track_session_id", sessionId)))
             .andExpect(status().isOk());
     }
+    
+    @Test
+    void testCreateSession_WithoutAppId_ShouldReturn400() throws Exception {
+        // Given - appId 现在是必填的，不传应该返回 400 错误
+        SessionRequest request = new SessionRequest();
+        request.setUserId("user-123");
+        
+        // When & Then - 不传 appId 应该返回 400 Bad Request
+        mockMvc.perform(post("/api/session")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    void testCreateSession_WithEmptyAppId_ShouldReturn400() throws Exception {
+        // Given - appId 为空字符串应该返回 400 错误
+        SessionRequest request = new SessionRequest();
+        request.setAppId("");
+        request.setUserId("user-123");
+        
+        // When & Then - 传递空字符串 appId 应该返回 400 Bad Request
+        mockMvc.perform(post("/api/session")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    void testCreateSession_WithNullAppId_ShouldReturn400() throws Exception {
+        // Given - appId 为 null 应该返回 400 错误
+        SessionRequest request = new SessionRequest();
+        request.setAppId(null);
+        request.setUserId("user-123");
+        
+        // When & Then - 传递 null appId 应该返回 400 Bad Request
+        mockMvc.perform(post("/api/session")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest());
+    }
 }

@@ -42,6 +42,12 @@ public class SessionController {
             @RequestBody SessionRequest request,
             HttpServletResponse response) {
         
+        // 验证 appId 必填
+        if (request.getAppId() == null || request.getAppId().trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("BAD_REQUEST", "appId is required and cannot be empty"));
+        }
+        
         // 验证 / 初始化 AppId
         Optional<Project> projectOpt = projectRepository.findByAppId(request.getAppId());
         if (projectOpt.isEmpty()) {

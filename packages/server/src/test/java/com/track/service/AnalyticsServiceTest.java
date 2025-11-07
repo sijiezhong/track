@@ -118,5 +118,23 @@ class AnalyticsServiceTest {
         // 这里只验证方法存在
         assertNotNull(analyticsService);
     }
+    
+    @Test
+    void testGetPV_WithNullAppId_ShouldThrowException() {
+        // Given - appId 为 null 应该抛出异常
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            analyticsService.getPV(null, startTime, endTime, null);
+        });
+    }
+    
+    @Test
+    void testGetPV_WithEmptyAppId_ShouldThrowException() {
+        // Given - appId 为空字符串应该抛出异常
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            analyticsService.getPV("", startTime, endTime, null);
+        });
+    }
 }
 

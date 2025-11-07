@@ -38,10 +38,13 @@ public class AnalyticsController {
     @GetMapping("/overview")
     @Operation(summary = "概览 KPI", description = "获取指定时间区间内的 PV、UV、跳出率与平均停留")
     public ResponseEntity<OverviewResponse> getOverview(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         // 验证时区有效性
         try {
@@ -67,11 +70,14 @@ public class AnalyticsController {
     @GetMapping("/pv-uv/series")
     @Operation(summary = "PV/UV 趋势", description = "获取区间内按时间粒度聚合的 PV/UV 序列")
     public ResponseEntity<PvUvSeriesResponse> getPvUvSeries(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -87,11 +93,14 @@ public class AnalyticsController {
     @GetMapping("/pages/top")
     @Operation(summary = "页面 TopN", description = "获取区间内页面指标 TopN")
     public ResponseEntity<PagesTopResponse> getPagesTop(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -106,9 +115,12 @@ public class AnalyticsController {
     @GetMapping("/events-distribution")
     @Operation(summary = "事件类型分布", description = "区间内事件类型占比分布")
     public ResponseEntity<EventsDistributionResponse> getEventsDistribution(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -123,11 +135,14 @@ public class AnalyticsController {
     @GetMapping("/web-vitals")
     @Operation(summary = "Web Vitals 分位", description = "区间内 Web Vitals 指标的分位统计")
     public ResponseEntity<WebVitalsResponse> getWebVitals(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "LCP") String metric,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -139,12 +154,15 @@ public class AnalyticsController {
     @GetMapping("/web-vitals/series")
     @Operation(summary = "Web Vitals 趋势", description = "区间内 Web Vitals 指标趋势")
     public ResponseEntity<WebVitalsSeriesResponse> getWebVitalsSeries(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam String metric,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -160,12 +178,15 @@ public class AnalyticsController {
     @GetMapping("/custom-events")
     @Operation(summary = "自定义事件趋势", description = "按事件 ID 聚合的趋势数据")
     public ResponseEntity<CustomEventsSeriesResponse> getCustomEvents(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String eventId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "day") String groupBy,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -182,10 +203,13 @@ public class AnalyticsController {
     @GetMapping("/custom-events/top")
     @Operation(summary = "自定义事件 TopN", description = "区间内自定义事件 TopN")
     public ResponseEntity<CustomEventsTopResponse> getCustomEventsTop(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "10") int limit) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -201,11 +225,14 @@ public class AnalyticsController {
     @GetMapping("/errors/trend")
     @Operation(summary = "错误趋势", description = "区间内错误数量趋势")
     public ResponseEntity<ErrorsTrendResponse> getErrorsTrend(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "hour") String interval,
             @RequestParam(defaultValue = "UTC") String timezone) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -221,10 +248,13 @@ public class AnalyticsController {
     @GetMapping("/errors/top")
     @Operation(summary = "错误 TopN", description = "区间内错误 TopN")
     public ResponseEntity<ErrorsTopResponse> getErrorsTop(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(defaultValue = "10") int limit) {
+
+        // 验证 appId
+        validateAppId(appId);
 
         LocalDateTime startTime = parseStartDateTime(start);
         LocalDateTime endTime = parseEndDateTime(end);
@@ -307,6 +337,17 @@ public class AnalyticsController {
                 }
                 return null;
             }
+        }
+    }
+
+    /**
+     * 验证 appId 参数
+     * @param appId 应用 ID
+     * @throws IllegalArgumentException 如果 appId 为空或空字符串
+     */
+    private void validateAppId(String appId) {
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
         }
     }
 }

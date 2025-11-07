@@ -57,7 +57,7 @@ export default function AnalyticsPerformance() {
     Promise.all(
       METRICS.map((m) =>
         getWebVitals({
-          appId: appId || undefined,
+          appId: appId,
           start: start || undefined,
           end: end || undefined,
           metric: m.value,
@@ -79,13 +79,13 @@ export default function AnalyticsPerformance() {
     // 获取选中指标的分位数据和趋势
     Promise.all([
       getWebVitals({
-        appId: appId || undefined,
+        appId: appId,
         start: start || "",
         end: end || "",
         metric: selectedMetric,
       }),
       getWebVitalsSeries({
-        appId: appId || undefined,
+        appId: appId,
         start: start || "",
         end: end || "",
         metric: selectedMetric,

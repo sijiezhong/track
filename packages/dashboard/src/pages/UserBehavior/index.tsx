@@ -22,7 +22,7 @@ export default function UserBehavior() {
 
     let mounted = true;
     getEvents({
-      appId: appId || undefined,
+      appId: appId,
       start: start || undefined,
       end: end || undefined,
       page: 1,

@@ -46,7 +46,7 @@ public class EventsController {
     @GetMapping("/events")
     @Operation(summary = "事件列表", description = "查询事件记录（用于用户行为路径等功能）")
     public ResponseEntity<EventsListResponse> getEvents(
-            @RequestParam(required = false) String appId,
+            @RequestParam(required = true) String appId,
             @RequestParam(required = false) String start,
             @RequestParam(required = false) String end,
             @RequestParam(required = false) Integer type,
@@ -55,6 +55,11 @@ public class EventsController {
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(defaultValue = "UTC") String timezone) {
         
+        // 验证 appId
+        if (appId == null || appId.trim().isEmpty()) {
+            throw new IllegalArgumentException("appId is required and cannot be empty");
+        }
+        
         // 解析日期参数，处理空字符串
         LocalDateTime startTime = parseDateTime(start);
         LocalDateTime endTime = parseDateTime(end);
@@ -62,9 +67,8 @@ public class EventsController {
         // 构建查询条件
         Specification<Event> spec = Specification.where(null);
         
-        if (appId != null && !appId.isEmpty()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
-        }
+        // appId 现在是必填的，直接添加条件
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
         
         if (startTime != null && endTime != null) {
             spec = spec.and((root, query, cb) -> 

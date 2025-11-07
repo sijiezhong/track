@@ -78,7 +78,7 @@ export default function GlobalFilters() {
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-2">
         <Label className="text-xs text-zinc-500">项目</Label>
-        <Select value={appId} onValueChange={setAppId}>
+        <Select value={appId || ""} onValueChange={setAppId} required>
           <SelectTrigger className="w-[220px]">
             <SelectValue
               placeholder={
@@ -86,7 +86,7 @@ export default function GlobalFilters() {
                   ? "加载中…"
                   : projects.length === 0
                     ? "暂无项目"
-                    : "请选择项目"
+                    : "请选择项目（必填）"
               }
             />
           </SelectTrigger>
@@ -98,6 +98,9 @@ export default function GlobalFilters() {
             ))}
           </SelectContent>
         </Select>
+        {!appId && projects.length > 0 && (
+          <span className="text-xs text-red-500">请选择项目</span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

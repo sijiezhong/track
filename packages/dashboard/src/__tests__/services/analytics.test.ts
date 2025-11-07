@@ -25,14 +25,14 @@ describe("analytics service", () => {
       expect(typeof result.timezone).toBe("string");
     });
 
-    it("should handle optional appId", async () => {
-      const result = await analytics.getOverview({
-        start: testParams.start,
-        end: testParams.end,
-      });
-
-      expect(result).toBeDefined();
-      expect(result.pv).toBeGreaterThanOrEqual(0);
+    it("should require appId", async () => {
+      // appId 现在是必填的，不传应该会报错
+      await expect(
+        analytics.getOverview({
+          start: testParams.start,
+          end: testParams.end,
+        } as any),
+      ).rejects.toThrow();
     });
 
     it("should handle optional start and end", async () => {

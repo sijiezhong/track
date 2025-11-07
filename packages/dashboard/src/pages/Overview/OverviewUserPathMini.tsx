@@ -26,7 +26,7 @@ export default function OverviewUserPathMini({
     let mounted = true;
     setLoading(true);
     getEvents({
-      appId: appId || undefined,
+      appId: appId,
       start: start || undefined,
       end: end || undefined,
       page: 1,

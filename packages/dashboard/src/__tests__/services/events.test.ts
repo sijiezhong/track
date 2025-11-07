@@ -25,14 +25,14 @@ describe("events service", () => {
       expect(typeof result.page.total).toBe("number");
     });
 
-    it("should handle optional appId", async () => {
-      const result = await events.getEvents({
-        start: testParams.start,
-        end: testParams.end,
-      });
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result.items)).toBe(true);
+    it("should require appId", async () => {
+      // appId 现在是必填的，不传应该会报错
+      await expect(
+        events.getEvents({
+          start: testParams.start,
+          end: testParams.end,
+        } as any),
+      ).rejects.toThrow();
     });
 
     it("should support pagination", async () => {

@@ -44,13 +44,13 @@ export default function AnalyticsErrors() {
     setLoading(true);
     Promise.all([
       getErrorsTrend({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         interval: "hour",
       }),
       getErrorsTop({
-        appId: appId || undefined,
+        appId: appId,
         start: start || undefined,
         end: end || undefined,
         limit: 50,
