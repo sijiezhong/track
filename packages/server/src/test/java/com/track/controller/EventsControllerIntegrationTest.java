@@ -142,7 +142,7 @@ class EventsControllerIntegrationTest {
     @Test
     void testGetEvents_WithoutAppId_ShouldReturn400() throws Exception {
         // Given - appId 现在是必填的，不传应该返回 400 错误
-        
+
         // When & Then - 不传 appId 应该返回 400 Bad Request
         mockMvc.perform(get("/api/events")
                 .param("start", startTime.toString())

@@ -68,7 +68,7 @@ public class EventsController {
         Specification<Event> spec = Specification.where(null);
         
         // appId 现在是必填的，直接添加条件
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
         
         if (startTime != null && endTime != null) {
             spec = spec.and((root, query, cb) -> 

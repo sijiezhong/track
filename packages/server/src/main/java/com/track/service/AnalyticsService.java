@@ -46,7 +46,7 @@ public class AnalyticsService {
             Specification<Event> spec = Specification.where(null);
 
             // appId 现在是必填的，直接添加条件
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
 
             spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
 
@@ -85,7 +85,7 @@ public class AnalyticsService {
             List<Predicate> predicates = new ArrayList<>();
 
             // appId 现在是必填的，直接添加条件
-            predicates.add(cb.equal(root.get("appId"), appId));
+                predicates.add(cb.equal(root.get("appId"), appId));
 
             predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
 
@@ -189,7 +189,7 @@ public class AnalyticsService {
             Specification<Event> spec = Specification.where(null);
 
             // appId 现在是必填的，直接添加条件
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
 
             spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_STAY.getCode()))
                     .and((root, query, cb) -> cb.isNotNull(root.get("properties")));
@@ -272,7 +272,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -330,7 +330,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -382,7 +382,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
             query.setParameter("endTime", endTime);
@@ -427,7 +427,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -489,7 +489,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PERFORMANCE.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -545,7 +545,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -580,7 +580,7 @@ public class AnalyticsService {
         Specification<Event> spec = Specification.where(null);
 
         // appId 现在是必填的，直接添加条件
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
 
         spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.CUSTOM.getCode()));
 
@@ -626,7 +626,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.CUSTOM.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -681,7 +681,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -736,7 +736,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.ERROR.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);
@@ -783,7 +783,7 @@ public class AnalyticsService {
 
         Query query = entityManager.createNativeQuery(sql);
         // appId 现在是必填的，直接设置参数
-        query.setParameter("appId", appId);
+            query.setParameter("appId", appId);
         query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
         if (startTime != null && endTime != null) {
             query.setParameter("startTime", startTime);

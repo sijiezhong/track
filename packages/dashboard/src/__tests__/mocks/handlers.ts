@@ -3,7 +3,20 @@ import { http, HttpResponse } from "msw";
 // 使用相对路径匹配所有请求
 export const handlers = [
   // Analytics endpoints
-  http.get("/api/analytics/overview", () => {
+  http.get("/api/analytics/overview", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       pv: 1000,
       uv: 500,
@@ -15,7 +28,18 @@ export const handlers = [
 
   http.get("/api/analytics/pv-uv/series", ({ request }) => {
     const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
     const interval = url.searchParams.get("interval") || "hour";
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
 
     return HttpResponse.json({
       series: [
@@ -27,7 +51,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/pages/top", () => {
+  http.get("/api/analytics/pages/top", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       list: [
         { pageUrl: "/page1", pv: 1000, uv: 500, avgDurationSec: 120.5 },
@@ -37,7 +74,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/events-distribution", () => {
+  http.get("/api/analytics/events-distribution", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       list: [
         { type: "page_view", value: 5000 },
@@ -47,7 +97,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/web-vitals", () => {
+  http.get("/api/analytics/web-vitals", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       p50: 1200.0,
       p75: 2040.0,
@@ -56,7 +119,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/web-vitals/series", () => {
+  http.get("/api/analytics/web-vitals/series", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       series: [
         { ts: "2024-01-01T00:00:00", p50: 1200.0, p75: 2040.0, p95: 3480.0 },
@@ -69,7 +145,18 @@ export const handlers = [
 
   http.get("/api/analytics/custom-events", ({ request }) => {
     const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
     const groupBy = url.searchParams.get("groupBy") || "day";
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
 
     return HttpResponse.json({
       series: [
@@ -81,7 +168,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/custom-events/top", () => {
+  http.get("/api/analytics/custom-events/top", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       list: [
         { eventId: "event1", count: 1000 },
@@ -91,7 +191,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/errors/trend", () => {
+  http.get("/api/analytics/errors/trend", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       series: [
         { ts: "2024-01-01T00:00:00", count: 10 },
@@ -102,7 +215,20 @@ export const handlers = [
     });
   }),
 
-  http.get("/api/analytics/errors/top", () => {
+  http.get("/api/analytics/errors/top", ({ request }) => {
+    const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
+
     return HttpResponse.json({
       list: [
         {
@@ -127,8 +253,19 @@ export const handlers = [
   // Events endpoint
   http.get("/api/events", ({ request }) => {
     const url = new URL(request.url);
+    const appId = url.searchParams.get("appId");
     const page = parseInt(url.searchParams.get("page") || "1", 10);
     const size = parseInt(url.searchParams.get("size") || "50", 10);
+
+    if (!appId || appId.trim() === "") {
+      return HttpResponse.json(
+        {
+          code: "BAD_REQUEST",
+          message: "appId is required and cannot be empty",
+        },
+        { status: 400 },
+      );
+    }
 
     return HttpResponse.json({
       items: [
