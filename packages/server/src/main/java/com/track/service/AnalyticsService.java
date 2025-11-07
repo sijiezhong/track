@@ -37,145 +37,177 @@ public class AnalyticsService {
      * 统计 PV（页面浏览量）
      */
     public long getPV(String appId, LocalDateTime startTime, LocalDateTime endTime, String pageUrl) {
-        Specification<Event> spec = Specification.where(null);
+        try {
+            Specification<Event> spec = Specification.where(null);
 
-        if (appId != null && !appId.isEmpty()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+            if (appId != null && !appId.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+            }
+
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
+
+            // 只有当提供了时间范围时才添加时间条件
+            if (startTime != null && endTime != null) {
+                spec = spec.and((root, query, cb) -> cb.between(root.get("serverTimestamp"), startTime, endTime));
+            }
+
+            if (pageUrl != null && !pageUrl.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("pageUrl"), pageUrl));
+            }
+
+            return eventRepository.count(spec);
+        } catch (Exception e) {
+            // 记录错误并返回默认值，避免接口崩溃
+            org.slf4j.LoggerFactory.getLogger(AnalyticsService.class)
+                    .error("Error calculating PV", e);
+            return 0L;
         }
-
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
-
-        // 只有当提供了时间范围时才添加时间条件
-        if (startTime != null && endTime != null) {
-            spec = spec.and((root, query, cb) -> cb.between(root.get("serverTimestamp"), startTime, endTime));
-        }
-
-        if (pageUrl != null && !pageUrl.isEmpty()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("pageUrl"), pageUrl));
-        }
-
-        return eventRepository.count(spec);
     }
 
     /**
      * 统计 UV（独立访客数）
      */
     public long getUV(String appId, LocalDateTime startTime, LocalDateTime endTime, String pageUrl) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Long> query = cb.createQuery(Long.class);
-        Root<Event> root = query.from(Event.class);
+        try {
+            CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+            CriteriaQuery<Long> query = cb.createQuery(Long.class);
+            Root<Event> root = query.from(Event.class);
 
-        List<Predicate> predicates = new ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
 
-        if (appId != null && !appId.isEmpty()) {
-            predicates.add(cb.equal(root.get("appId"), appId));
+            if (appId != null && !appId.isEmpty()) {
+                predicates.add(cb.equal(root.get("appId"), appId));
+            }
+
+            predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
+
+            // 只有当提供了时间范围时才添加时间条件
+            if (startTime != null && endTime != null) {
+                predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
+            }
+
+            if (pageUrl != null && !pageUrl.isEmpty()) {
+                predicates.add(cb.equal(root.get("pageUrl"), pageUrl));
+            }
+
+            query.select(cb.countDistinct(root.get("userId")))
+                    .where(predicates.toArray(new Predicate[0]));
+
+            TypedQuery<Long> typedQuery = entityManager.createQuery(query);
+            Long result = typedQuery.getSingleResult();
+            return result != null ? result : 0L;
+        } catch (Exception e) {
+            // 记录错误并返回默认值，避免接口崩溃
+            org.slf4j.LoggerFactory.getLogger(AnalyticsService.class)
+                    .error("Error calculating UV", e);
+            return 0L;
         }
-
-        predicates.add(cb.equal(root.get("eventTypeId"), EventType.PAGE_VIEW.getCode()));
-
-        // 只有当提供了时间范围时才添加时间条件
-        if (startTime != null && endTime != null) {
-            predicates.add(cb.between(root.get("serverTimestamp"), startTime, endTime));
-        }
-
-        if (pageUrl != null && !pageUrl.isEmpty()) {
-            predicates.add(cb.equal(root.get("pageUrl"), pageUrl));
-        }
-
-        query.select(cb.countDistinct(root.get("userId")))
-                .where(predicates.toArray(new Predicate[0]));
-
-        TypedQuery<Long> typedQuery = entityManager.createQuery(query);
-        Long result = typedQuery.getSingleResult();
-        return result != null ? result : 0L;
     }
 
     /**
      * 计算跳出率
      */
     public double getBounceRate(String appId, LocalDateTime startTime, LocalDateTime endTime) {
-        long totalUV = getUV(appId, startTime, endTime, null);
+        try {
+            long totalUV = getUV(appId, startTime, endTime, null);
 
-        if (totalUV == 0) {
+            if (totalUV == 0) {
+                return 0.0;
+            }
+
+            // 使用原生 SQL 查询只访问了一个页面的用户数
+            String timeCondition = (startTime != null && endTime != null)
+                    ? "AND e1.server_timestamp BETWEEN :startTime AND :endTime"
+                    : "";
+            String subTimeCondition = (startTime != null && endTime != null)
+                    ? "AND e2.server_timestamp BETWEEN :startTime AND :endTime"
+                    : "";
+
+            String sql = """
+                    SELECT COUNT(DISTINCT e1.user_id)
+                    FROM events e1
+                    WHERE (:appId IS NULL OR e1.app_id = :appId)
+                      AND e1.event_type_id = :eventTypeId
+                      """ + timeCondition + """
+                    AND (
+                      SELECT COUNT(DISTINCT e2.page_url)
+                      FROM events e2
+                      WHERE (:appId IS NULL OR e2.app_id = :appId)
+                        AND e2.event_type_id = :eventTypeId
+                        """ + subTimeCondition + """
+                          AND e2.user_id = e1.user_id
+                      ) = 1
+                    """;
+
+            Query query = entityManager.createNativeQuery(sql);
+            query.setParameter("appId", appId);
+            query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
+            if (startTime != null && endTime != null) {
+                query.setParameter("startTime", startTime);
+                query.setParameter("endTime", endTime);
+            }
+
+            try {
+                Object result = query.getSingleResult();
+                Long bounceUV = result != null ? ((Number) result).longValue() : 0L;
+                return (double) bounceUV / totalUV;
+            } catch (jakarta.persistence.NoResultException e) {
+                // 如果没有结果，返回 0.0
+                return 0.0;
+            }
+        } catch (Exception e) {
+            // 记录错误并返回默认值，避免接口崩溃
+            org.slf4j.LoggerFactory.getLogger(AnalyticsService.class)
+                    .error("Error calculating bounce rate", e);
             return 0.0;
         }
-
-        // 使用原生 SQL 查询只访问了一个页面的用户数
-        String timeCondition = (startTime != null && endTime != null)
-                ? "AND e1.server_timestamp BETWEEN :startTime AND :endTime"
-                : "";
-        String subTimeCondition = (startTime != null && endTime != null)
-                ? "AND e2.server_timestamp BETWEEN :startTime AND :endTime"
-                : "";
-
-        String sql = """
-                SELECT COUNT(DISTINCT e1.user_id)
-                FROM events e1
-                WHERE (:appId IS NULL OR e1.app_id = :appId)
-                  AND e1.event_type_id = :eventTypeId
-                  """ + timeCondition + """
-                AND (
-                  SELECT COUNT(DISTINCT e2.page_url)
-                  FROM events e2
-                  WHERE (:appId IS NULL OR e2.app_id = :appId)
-                    AND e2.event_type_id = :eventTypeId
-                    """ + subTimeCondition + """
-                      AND e2.user_id = e1.user_id
-                  ) = 1
-                """;
-
-        Query query = entityManager.createNativeQuery(sql);
-        query.setParameter("appId", appId);
-        query.setParameter("eventTypeId", EventType.PAGE_VIEW.getCode());
-        if (startTime != null && endTime != null) {
-            query.setParameter("startTime", startTime);
-            query.setParameter("endTime", endTime);
-        }
-
-        Object result = query.getSingleResult();
-        Long bounceUV = result != null ? ((Number) result).longValue() : 0L;
-
-        return (double) bounceUV / totalUV;
     }
 
     /**
      * 计算平均停留时长（秒）
      */
     public double getAvgDuration(String appId, LocalDateTime startTime, LocalDateTime endTime) {
-        Specification<Event> spec = Specification.where(null);
+        try {
+            Specification<Event> spec = Specification.where(null);
 
-        if (appId != null && !appId.isEmpty()) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
-        }
+            if (appId != null && !appId.isEmpty()) {
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("appId"), appId));
+            }
 
-        spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_STAY.getCode()))
-                .and((root, query, cb) -> cb.isNotNull(root.get("properties")));
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("eventTypeId"), EventType.PAGE_STAY.getCode()))
+                    .and((root, query, cb) -> cb.isNotNull(root.get("properties")));
 
-        // 只有当提供了时间范围时才添加时间条件
-        if (startTime != null && endTime != null) {
-            spec = spec.and((root, query, cb) -> cb.between(root.get("serverTimestamp"), startTime, endTime));
-        }
+            // 只有当提供了时间范围时才添加时间条件
+            if (startTime != null && endTime != null) {
+                spec = spec.and((root, query, cb) -> cb.between(root.get("serverTimestamp"), startTime, endTime));
+            }
 
-        List<Event> events = eventRepository.findAll(spec);
+            List<Event> events = eventRepository.findAll(spec);
 
-        if (events.isEmpty()) {
-            return 0.0;
-        }
+            if (events.isEmpty()) {
+                return 0.0;
+            }
 
-        double sum = 0.0;
-        int count = 0;
+            double sum = 0.0;
+            int count = 0;
 
-        for (Event event : events) {
-            if (event.getProperties() != null && event.getProperties().containsKey("duration")) {
-                Object durationObj = event.getProperties().get("duration");
-                if (durationObj instanceof Number) {
-                    sum += ((Number) durationObj).doubleValue();
-                    count++;
+            for (Event event : events) {
+                if (event.getProperties() != null && event.getProperties().containsKey("duration")) {
+                    Object durationObj = event.getProperties().get("duration");
+                    if (durationObj instanceof Number) {
+                        sum += ((Number) durationObj).doubleValue();
+                        count++;
+                    }
                 }
             }
-        }
 
-        return count > 0 ? sum / count : 0.0;
+            return count > 0 ? sum / count : 0.0;
+        } catch (Exception e) {
+            // 记录错误并返回默认值，避免接口崩溃
+            org.slf4j.LoggerFactory.getLogger(AnalyticsService.class)
+                    .error("Error calculating average duration", e);
+            return 0.0;
+        }
     }
 
     /**

@@ -27,10 +27,23 @@ export default function UserPathGraph({
 
     // 验证数据：确保所有节点都有有效的 ID，所有边的 source/target 都指向有效节点
     const nodeIds = new Set(data.nodes.map((n) => n.id).filter(Boolean));
+    // 去重边，避免 G6 报错 "Edge already exists"
+    const edgeSet = new Set<string>();
     const validEdges = data.edges.filter((e) => {
-      return (
-        e.source && e.target && nodeIds.has(e.source) && nodeIds.has(e.target)
-      );
+      if (
+        !e.source ||
+        !e.target ||
+        !nodeIds.has(e.source) ||
+        !nodeIds.has(e.target)
+      ) {
+        return false;
+      }
+      const edgeKey = `${e.source}-${e.target}`;
+      if (edgeSet.has(edgeKey)) {
+        return false; // 跳过重复的边
+      }
+      edgeSet.add(edgeKey);
+      return true;
     });
 
     if (validEdges.length === 0) {

@@ -55,12 +55,18 @@ export default function UserBehavior() {
           return { id, label };
         });
 
+        // 使用 Set 去重边，避免重复边导致 G6 报错
+        const edgeSet = new Set<string>();
         const edges: { source: string; target: string }[] = [];
         for (let i = 1; i < validUrls.length; i++) {
           const a = uniq.indexOf(validUrls[i - 1]);
           const b = uniq.indexOf(validUrls[i]);
           if (a !== -1 && b !== -1 && a !== b) {
-            edges.push({ source: String(a), target: String(b) });
+            const edgeKey = `${a}-${b}`;
+            if (!edgeSet.has(edgeKey)) {
+              edgeSet.add(edgeKey);
+              edges.push({ source: String(a), target: String(b) });
+            }
           }
         }
 
