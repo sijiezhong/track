@@ -243,8 +243,8 @@ public class AnalyticsService {
                     COUNT(DISTINCT user_id) as uv
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
-                """ + timeCondition + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
@@ -446,8 +446,8 @@ public class AnalyticsService {
                     PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY CAST((properties->>:metric) AS numeric)) as p95
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
-                """ + timeCondition + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
                   AND properties->>:metric IS NOT NULL
                   AND (properties->>:metric) ~ '^[0-9]+(\\.[0-9]+)?$'
                 GROUP BY ts
@@ -498,12 +498,13 @@ public class AnalyticsService {
                     COUNT(*) as count
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
-                  """ + timeCondition + """
-                """ + (eventId != null && !eventId.isEmpty() ? "AND custom_event_id = :eventId" : "") + """
-                GROUP BY ts
-                ORDER BY ts
-                """;
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
+                """ + (eventId != null && !eventId.isEmpty() ? "\n                AND custom_event_id = :eventId" : "")
+                + """
+                        GROUP BY ts
+                        ORDER BY ts
+                        """;
 
         Query query = entityManager.createNativeQuery(sql);
         if (appId != null && !appId.isEmpty()) {
@@ -629,8 +630,8 @@ public class AnalyticsService {
                     COUNT(*) as count
                 FROM events
                 WHERE event_type_id = :eventTypeId
-                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
-                """ + timeCondition + """
+                """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId" : "") + """
+                """ + (timeCondition.isEmpty() ? "" : "\n                " + timeCondition) + """
                 GROUP BY ts
                 ORDER BY ts
                 """;
@@ -681,7 +682,7 @@ public class AnalyticsService {
                 FROM events
                 WHERE event_type_id = :eventTypeId
                 """ + (appId != null && !appId.isEmpty() ? "\n                  AND app_id = :appId\n" : "") + """
-                  """ + timeCondition + """
+                """ + timeCondition + """
                 GROUP BY fingerprint, message
                 ORDER BY count DESC
                 LIMIT :limit
