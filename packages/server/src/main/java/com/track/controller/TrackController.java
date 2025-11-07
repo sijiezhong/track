@@ -68,6 +68,9 @@ public class TrackController {
                 return ResponseEntity.status(429).build(); // Too Many Requests
             }
             
+            // 4.5. 自动刷新 Session TTL（每次上报时延长有效期）
+            sessionService.refreshSession(sessionId, sessionInfo.getTtlMinutes());
+            
             // 5. 补充信息（从 session 和请求中获取）
             batchRequest.setAppId(sessionInfo.getAppId());
             batchRequest.setUserId(sessionInfo.getUserId());

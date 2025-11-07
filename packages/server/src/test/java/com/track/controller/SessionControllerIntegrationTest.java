@@ -129,7 +129,7 @@ class SessionControllerIntegrationTest {
         SessionRequest request = new SessionRequest();
         request.setAppId(inactiveApp);
         request.setUserId("user-123");
-
+        
         // When & Then
         mockMvc.perform(post("/api/session")
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)

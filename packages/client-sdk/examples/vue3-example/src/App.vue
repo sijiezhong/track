@@ -37,9 +37,9 @@ async function onInit() {
     log('正在初始化 SDK...', 'info')
 
     const cfg: any = {
-      appId: appId.value,
-      userId: userId.value,
-      userProps: { plan: 'premium', version: '1.0.0', source: 'vue3-example' },
+        appId: appId.value,
+        userId: userId.value,
+        userProps: { plan: 'premium', version: '1.0.0', source: 'vue3-example' },
     }
     if (appName.value) cfg.appName = appName.value
 

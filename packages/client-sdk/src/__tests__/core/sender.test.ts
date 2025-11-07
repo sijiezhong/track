@@ -103,7 +103,78 @@ describe("Sender", () => {
   });
 
   describe("Session 失效处理", () => {
-    it("should call onSessionExpired callback on 401", async () => {
+    it("should retry once after re-init on 401", async () => {
+      // 第一次返回 401，重试后返回 200
+      const fetchSpy = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+        } as Response);
+      global.fetch = fetchSpy;
+      (global.navigator as any).sendBeacon = undefined;
+
+      // onSessionExpired 返回 Promise，模拟重新 init
+      onSessionExpired = vi.fn().mockResolvedValue(undefined);
+      sender = new Sender(endpoint, onSessionExpired);
+
+      const events: EventData[] = [
+        {
+          type: EventType.CUSTOM,
+          eventId: "test-event",
+          properties: {},
+        },
+      ];
+
+      await sender.sendEvents(events);
+
+      // 验证 onSessionExpired 被调用
+      expect(onSessionExpired).toHaveBeenCalledTimes(1);
+      // 验证重试了一次（总共调用 2 次 fetch）
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("should retry once after re-init on 403", async () => {
+      // 第一次返回 403，重试后返回 200
+      const fetchSpy = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+        } as Response);
+      global.fetch = fetchSpy;
+      (global.navigator as any).sendBeacon = undefined;
+
+      // onSessionExpired 返回 Promise，模拟重新 init
+      onSessionExpired = vi.fn().mockResolvedValue(undefined);
+      sender = new Sender(endpoint, onSessionExpired);
+
+      const events: EventData[] = [
+        {
+          type: EventType.CUSTOM,
+          eventId: "test-event",
+          properties: {},
+        },
+      ];
+
+      await sender.sendEvents(events);
+
+      // 验证 onSessionExpired 被调用
+      expect(onSessionExpired).toHaveBeenCalledTimes(1);
+      // 验证重试了一次（总共调用 2 次 fetch）
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("should throw error if retry still fails with 401", async () => {
+      // 两次都返回 401
       const fetchSpy = vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
@@ -111,6 +182,10 @@ describe("Sender", () => {
       global.fetch = fetchSpy;
       (global.navigator as any).sendBeacon = undefined;
 
+      // onSessionExpired 返回 Promise，模拟重新 init
+      onSessionExpired = vi.fn().mockResolvedValue(undefined);
+      sender = new Sender(endpoint, onSessionExpired);
+
       const events: EventData[] = [
         {
           type: EventType.CUSTOM,
@@ -120,19 +195,24 @@ describe("Sender", () => {
       ];
 
       await expect(sender.sendEvents(events)).rejects.toThrow(
-        "Session expired",
+        "Session expired after retry",
       );
       expect(onSessionExpired).toHaveBeenCalledTimes(1);
+      // 验证重试了一次（总共调用 2 次 fetch）
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
 
-    it("should call onSessionExpired callback on 403", async () => {
+    it("should throw error if no onSessionExpired callback on 401", async () => {
       const fetchSpy = vi.fn().mockResolvedValue({
         ok: false,
-        status: 403,
+        status: 401,
       } as Response);
       global.fetch = fetchSpy;
       (global.navigator as any).sendBeacon = undefined;
 
+      // 没有 onSessionExpired 回调
+      sender = new Sender(endpoint);
+
       const events: EventData[] = [
         {
           type: EventType.CUSTOM,
@@ -144,7 +224,8 @@ describe("Sender", () => {
       await expect(sender.sendEvents(events)).rejects.toThrow(
         "Session expired",
       );
-      expect(onSessionExpired).toHaveBeenCalledTimes(1);
+      // 只调用一次，没有重试
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
     it("should throw error on non-ok response", async () => {

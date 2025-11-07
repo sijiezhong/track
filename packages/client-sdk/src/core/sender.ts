@@ -8,9 +8,9 @@ import { removeNulls } from "../utils";
  */
 export class Sender {
   private endpoint: string;
-  private onSessionExpired?: () => void;
+  private onSessionExpired?: () => Promise<void>;
 
-  constructor(endpoint: string, onSessionExpired?: () => void) {
+  constructor(endpoint: string, onSessionExpired?: () => Promise<void>) {
     this.endpoint = endpoint.replace(/\/$/, ""); // 移除末尾的斜杠
     this.onSessionExpired = onSessionExpired;
   }
@@ -66,9 +66,32 @@ export class Sender {
 
       // 处理 session 失效（401/403）
       if (response.status === 401 || response.status === 403) {
-        // Session 失效，触发重新 init
+        // Session 失效，触发重新 init 并重试一次
         if (this.onSessionExpired) {
-          this.onSessionExpired();
+          // 等待重新初始化完成
+          await this.onSessionExpired();
+          // 重试一次发送
+          const retryResponse = await fetch(`${this.endpoint}/api/ingest`, {
+            method: "POST",
+            mode: "cors",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(cleanedPayload),
+            keepalive: true,
+          });
+          // 如果重试仍然失败，抛出错误
+          if (retryResponse.status === 401 || retryResponse.status === 403) {
+            throw new Error("Session expired after retry");
+          }
+          if (!retryResponse.ok) {
+            throw new Error(
+              `HTTP ${retryResponse.status}: ${retryResponse.statusText}`,
+            );
+          }
+          // 重试成功，返回
+          return;
         }
         throw new Error("Session expired");
       }

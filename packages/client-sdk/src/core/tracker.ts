@@ -94,12 +94,15 @@ export class Track {
       this.storage.saveTrackConfig(this.trackConfig);
 
       // 初始化发送器和批量管理器
-      this.sender = new Sender(this.trackConfig.endpoint, () => {
+      this.sender = new Sender(this.trackConfig.endpoint, async () => {
         // Session 失效时的回调，尝试重新 init
         if (this.userConfig && this.trackConfig) {
-          this.init(this.userConfig, this.trackConfig).catch((error) => {
+          try {
+            await this.init(this.userConfig, this.trackConfig);
+          } catch (error) {
             console.warn("[Track SDK] Failed to reinitialize session:", error);
-          });
+            throw error; // 重新抛出，让 Sender 知道重试失败
+          }
         }
       });
 
@@ -239,38 +242,6 @@ export class Track {
   }
 
   /**
-   * 刷新 Session（每次上报前调用）
-   */
-  private async refreshSession(): Promise<void> {
-    if (!this.trackConfig) {
-      return;
-    }
-
-    try {
-      await fetch(`${this.trackConfig.endpoint}/api/session/refresh`, {
-        method: "POST",
-        mode: "cors",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    } catch (e) {
-      // 刷新失败，可能是 session 失效，尝试重新 init
-      if (this.userConfig && this.trackConfig) {
-        try {
-          await this.init(this.userConfig, this.trackConfig);
-        } catch (error) {
-          console.warn(
-            "[Track SDK] Failed to reinitialize session after refresh failure:",
-            error,
-          );
-        }
-      }
-    }
-  }
-
-  /**
    * 上报自定义事件
    *
    * @param eventId - 自定义事件唯一标识符
@@ -286,9 +257,6 @@ export class Track {
       console.warn("[Track SDK] BatchManager is not initialized");
       return;
     }
-
-    // 刷新 Session
-    this.refreshSession();
 
     const event: EventData = {
       type: EventType.CUSTOM,
@@ -306,9 +274,6 @@ export class Track {
     if (!this.started || !this.batchManager) {
       return;
     }
-
-    // 刷新 Session
-    this.refreshSession();
 
     this.batchManager.addEvent(event);
   }

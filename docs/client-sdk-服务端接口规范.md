@@ -59,24 +59,19 @@ curl -i -X POST "https://your-endpoint.com/api/session" \
 
 ---
 
-### 2) 刷新会话
+### 2) 刷新会话（可选，已废弃）
 - 路径：`POST /api/session/refresh`
-- 用途：刷新会话有效期（基于 Cookie 获取会话标识）。SDK 在上报前会尝试调用，用于延长会话。
+- 用途：刷新会话有效期（基于 Cookie 获取会话标识）。**注意：此接口已不再需要，因为 `/api/ingest` 会自动刷新 Session TTL。** 保留此接口仅用于向后兼容。
 - 请求头：`Content-Type: application/json`
 - 请求体：无（基于 Cookie 识别会话）
 - 成功响应（建议）：
   - 状态码：`200`
   - 体：`{ "ok": true }`
 - 失败响应：
-  - `401` / `403`：会话不存在或无效（SDK 将尝试重新初始化 `POST /api/session`）
+  - `401` / `403`：会话不存在或无效
   - 其他 `4xx/5xx`：根据具体错误返回
 
-示例（cURL）：
-```bash
-curl -i -X POST "https://your-endpoint.com/api/session/refresh" \
-  -H "Content-Type: application/json" \
-  --cookie "SessionId=<value>"
-```
+> **说明**：新版本 SDK 不再主动调用此接口。Session 的刷新由服务端在 `/api/ingest` 中自动完成。前端仅在收到 401/403 时才会重新初始化 Session 并重试一次。
 
 ---
 
@@ -112,11 +107,12 @@ curl -i -X POST "https://your-endpoint.com/api/session/destroy" \
     - `t`：事件类型（与 SDK `EventType` 枚举对应，数值枚举）
     - `id`：自定义事件 ID（仅自定义事件存在）
     - `p`：事件属性对象（SDK 侧已去除 `null/undefined`）
+- **自动刷新 Session**：服务端在处理成功的事件上报时，会自动刷新对应 Session 的 TTL（延长有效期）。前端无需主动调用 `/api/session/refresh`。
 - 成功响应（建议）：
-  - 状态码：`200`
-  - 体：`{ "ok": true }`
+  - 状态码：`200` 或 `202`（Accepted）
+  - 体：`{ "ok": true }` 或空体
 - 失败响应：
-  - `401` / `403`：会话失效（SDK 会触发重新初始化，会在后续重试）
+  - `401` / `403`：会话失效（SDK 会自动触发重新初始化，并重试一次当前批次；若重试仍失败则抛出错误）
   - `413`：请求体过大（可提示客户端调整批次大小）
   - 其他 `4xx/5xx`：根据具体错误返回
 - 兼容性：SDK 在 `fetch` 模式下使用 `keepalive: true`，以便在页面卸载时也能发送；`sendBeacon` 路径无需返回体，但建议保持 `200`。
